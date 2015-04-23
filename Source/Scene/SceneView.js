@@ -22,7 +22,6 @@ define([
         '../Core/JulianDate',
         '../Core/Math',
         '../Core/Matrix4',
-        '../Core/mergeSort',
         '../Core/Occluder',
         '../Core/ShowGeometryInstanceAttribute',
         '../Renderer/ClearCommand',
@@ -33,9 +32,7 @@ define([
         './CullingVolume',
         './FrameState',
         './FrustumCommands',
-        './FXAA',
         './GlobeDepth',
-        './OIT',
         './OrthographicFrustum',
         './Pass',
         './PerformanceDisplay',
@@ -72,7 +69,6 @@ define([
         JulianDate,
         CesiumMath,
         Matrix4,
-        mergeSort,
         Occluder,
         ShowGeometryInstanceAttribute,
         ClearCommand,
@@ -83,9 +79,7 @@ define([
         CullingVolume,
         FrameState,
         FrustumCommands,
-        FXAA,
         GlobeDepth,
-        OIT,
         OrthographicFrustum,
         Pass,
         PerformanceDisplay,
@@ -212,19 +206,8 @@ define([
 
         this._commandList = [];
         this._frustumCommandsList = [];
-        this._overlayCommandList = [];
-
-        this._useOIT = defaultValue(options.orderIndependentTranslucency, true);
-        this._executeOITFunction = undefined;
 
         this._globeDepth = new GlobeDepth(context);
-
-        this._oit =  undefined;
-        if (this._useOIT && this._globeDepth.supported) {
-            this._oit = new OIT(context, this._globeDepth.framebuffer);
-        }
-
-        this._fxaa = new FXAA();
 
         this._clearColorCommand = new ClearCommand({
             color : new Color(),
@@ -249,20 +232,6 @@ define([
          * @default false
          */
         this.rethrowRenderErrors = false;
-
-        /**
-         * The event fired at the beginning of a scene transition.
-         * @type {Event}
-         * @default Event()
-         */
-        this.morphStart = new Event();
-
-        /**
-         * The event fired at the completion of a scene transition.
-         * @type {Event}
-         * @default Event()
-         */
-        this.morphComplete = new Event();
 
         /**
          * The {@link SkyBox} used to draw the stars.
@@ -436,15 +405,6 @@ define([
          * @default 1
          */
         this.debugShowGlobeDepthFrustum = 1;
-
-        /**
-         * When <code>true</code>, enables Fast Approximate Anti-aliasing even when order independent translucency
-         * is unsupported.
-         *
-         * @type Boolean
-         * @default true
-         */
-        this.fxaa = true;
 
         this._performanceDisplay = undefined;
         this._debugSphere = undefined;
@@ -761,20 +721,6 @@ define([
         },
 
         /**
-         * Gets whether or not the scene has order independent translucency enabled.
-         * Note that this only reflects the original construction option, and there are
-         * other factors that could prevent OIT from functioning on a given system configuration.
-         * @memberof Scene.prototype
-         * @type {Boolean}
-         * @readonly
-         */
-        orderIndependentTranslucency : {
-            get : function() {
-                return defined(this._oit);
-            }
-        },
-
-        /**
          * Gets the unique identifier for this scene.
          * @memberof Scene.prototype
          * @type {String}
@@ -918,7 +864,6 @@ define([
 
     function createPotentiallyVisibleSet(scene) {
         var commandList = scene._commandList;
-        var overlayList = scene._overlayCommandList;
 
         var cullingVolume = scene._frameState.cullingVolume;
         var camera = scene._camera;
@@ -941,7 +886,6 @@ define([
                 frustumCommandsList[n].indices[p] = 0;
             }
         }
-        overlayList.length = 0;
 
         var near = Number.MAX_VALUE;
         var far = Number.MIN_VALUE;
@@ -964,9 +908,7 @@ define([
             var command = commandList[i];
             var pass = command.pass;
 
-            if (pass === Pass.OVERLAY) {
-                overlayList.push(command);
-            } else {
+            if (pass !== Pass.OVERLAY) {
                 var boundingVolume = command.boundingVolume;
                 if (defined(boundingVolume)) {
                     if (command.cull &&
@@ -1171,21 +1113,6 @@ define([
                    (!defined(occluder) || occluder.isBoundingSphereVisible(boundingVolume)))));
     }
 
-    function translucentCompare(a, b, position) {
-        return BoundingSphere.distanceSquaredTo(b.boundingVolume, position) - BoundingSphere.distanceSquaredTo(a.boundingVolume, position);
-    }
-
-    function executeTranslucentCommandsSorted(scene, executeFunction, passState, commands) {
-        var context = scene.context;
-
-        mergeSort(commands, translucentCompare, scene._camera.positionWC);
-
-        var length = commands.length;
-        for (var j = 0; j < length; ++j) {
-            executeFunction(commands[j], scene, context, passState);
-        }
-    }
-
     function getDebugGlobeDepth(scene, context, index) {
         var globeDepth = scene._debugGlobeDepths[index];
         if (!defined(globeDepth)) {
@@ -1260,29 +1187,11 @@ define([
             }
         }
 
-        // If supported, configure OIT to use the globe depth framebuffer and clear the OIT framebuffer.
-        var useOIT = !picking && renderTranslucentCommands && defined(scene._oit) && scene._oit.isSupported();
-        if (useOIT) {
-            scene._oit.update(context, scene._globeDepth.framebuffer);
-            scene._oit.clear(context, passState, clearColor);
-            useOIT = useOIT && scene._oit.isSupported();
-        }
-
-        // If supported, configure FXAA to use the globe depth color texture and clear the FXAA framebuffer.
-        var useFXAA = !picking && scene.fxaa;
-        if (useFXAA) {
-            var fxaaTexture = !useOIT ? scene._globeDepth._colorTexture : undefined;
-            scene._fxaa.update(context, fxaaTexture);
-            scene._fxaa.clear(context, passState, clearColor);
-        }
-
         var sunVisible = isVisible(sunCommand, frameState);
         if (sunVisible && scene.sunBloom) {
             passState.framebuffer = scene._sunPostProcess.update(context);
         } else if (scene._globeDepth.supported) {
             passState.framebuffer = scene._globeDepth.framebuffer;
-        } else if (useFXAA) {
-            passState.framebuffer = scene._fxaa.getColorFramebuffer();
         }
 
         // Update the uniforms based on the original frustum.
@@ -1304,27 +1213,12 @@ define([
                 var framebuffer;
                 if (scene._globeDepth.supported) {
                     framebuffer = scene._globeDepth.framebuffer;
-                } else if (scene.fxaa) {
-                    framebuffer = scene._fxaa.getColorFramebuffer();
                 } else {
                     framebuffer = originalFramebuffer;
                 }
                 scene._sunPostProcess.execute(context, framebuffer);
                 passState.framebuffer = framebuffer;
             }
-        }
-
-        // Determine how translucent surfaces will be handled.
-        var executeTranslucentCommands;
-        if (useOIT) {
-            if (!defined(scene._executeOITFunction)) {
-                scene._executeOITFunction = function(scene, executeFunction, passState, commands) {
-                    scene._oit.executeCommands(scene, executeFunction, passState, commands);
-                };
-            }
-            executeTranslucentCommands = scene._executeOITFunction;
-        } else {
-            executeTranslucentCommands = executeTranslucentCommandsSorted;
         }
 
         // Execute commands in each frustum in back to front order
@@ -1365,7 +1259,6 @@ define([
             }
 
             // Execute commands in order by pass up to the translucent pass.
-            // Translucent geometry needs special handling (sorting/OIT).
             var startPass = Pass.GLOBE + 1;
             var endPass = Pass.TRANSLUCENT;
             for (var pass = startPass; pass < endPass; ++pass) {
@@ -1378,10 +1271,6 @@ define([
 
             frustum.near = frustumCommands.near;
             us.updateFrustum(frustum);
-
-            commands = frustumCommands.commands[Pass.TRANSLUCENT];
-            commands.length = frustumCommands.indices[Pass.TRANSLUCENT];
-            executeTranslucentCommands(scene, executeCommand, passState, commands);
         }
 
         if (scene.debugShowGlobeDepth) {
@@ -1389,20 +1278,8 @@ define([
             gd.executeDebugGlobeDepth(context, passState);
         }
 
-        if (useOIT) {
-            passState.framebuffer = useFXAA ? scene._fxaa.getColorFramebuffer() : undefined;
-            scene._oit.execute(context, passState);
-        }
-
-        if (useFXAA) {
-            passState.framebuffer = originalFramebuffer;
-            scene._fxaa.execute(context, passState);
-        }
-
-        if (!useOIT && !useFXAA) {
-            passState.framebuffer = originalFramebuffer;
-            scene._globeDepth.executeCopyColor(context, passState);
-        }
+        passState.framebuffer = originalFramebuffer;
+        scene._globeDepth.executeCopyColor(context, passState);
     }
 
     function updatePrimitives(scene) {
@@ -1465,7 +1342,6 @@ define([
         us.update(context, frameState);
 
         scene._commandList.length = 0;
-        scene._overlayCommandList.length = 0;
 
         updatePrimitives(scene);
         createPotentiallyVisibleSet(scene);
@@ -1568,10 +1444,6 @@ define([
         this._sunPostProcess = this._sunPostProcess && this._sunPostProcess.destroy();
 
         this._globeDepth.destroy();
-        if (defined(this._oit)) {
-            this._oit.destroy();
-        }
-        this._fxaa.destroy();
 
         this._context = this._context && this._context.destroy();
         this._frameState.creditDisplay.destroy();
