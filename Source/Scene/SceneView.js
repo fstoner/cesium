@@ -44,7 +44,6 @@ define([
         './SceneMode',
         './SceneTransitioner',
         './ScreenSpaceCameraController',
-        './SunPostProcess',
         './TweenCollection'
     ], function(
         BoundingRectangle,
@@ -91,7 +90,6 @@ define([
         SceneMode,
         SceneTransitioner,
         ScreenSpaceCameraController,
-        SunPostProcess,
         TweenCollection) {
     "use strict";
 
@@ -202,8 +200,6 @@ define([
 
         this._shaderFrameCount = 0;
 
-        this._sunPostProcess = undefined;
-
         this._commandList = [];
         this._frustumCommandsList = [];
 
@@ -234,55 +230,10 @@ define([
         this.rethrowRenderErrors = false;
 
         /**
-         * The {@link SkyBox} used to draw the stars.
-         *
-         * @type {SkyBox}
-         * @default undefined
-         *
-         * @see SceneView#backgroundColor
-         */
-        this.skyBox = undefined;
-
-        /**
-         * The sky atmosphere drawn around the globe.
-         *
-         * @type {SkyAtmosphere}
-         * @default undefined
-         */
-        this.skyAtmosphere = undefined;
-
-        /**
-         * The {@link Sun}.
-         *
-         * @type {Sun}
-         * @default undefined
-         */
-        this.sun = undefined;
-
-        /**
-         * Uses a bloom filter on the sun when enabled.
-         *
-         * @type {Boolean}
-         * @default true
-         */
-        this.sunBloom = true;
-        this._sunBloom = undefined;
-
-        /**
-         * The {@link Moon}
-         *
-         * @type Moon
-         * @default undefined
-         */
-        this.moon = undefined;
-
-        /**
-         * The background color, which is only visible if there is no sky box, i.e., {@link SceneView#skyBox} is undefined.
+         * The background color.
          *
          * @type {Color}
          * @default {@link Color.BLACK}
-         *
-         * @see SceneView#skyBox
          */
         this.backgroundColor = Color.clone(Color.BLACK);
 
@@ -1135,25 +1086,6 @@ define([
         var context = SceneView.context;
         var us = context.uniformState;
 
-        // Manage sun bloom post-processing effect.
-        if (defined(SceneView.sun) && SceneView.sunBloom !== SceneView._sunBloom) {
-            if (SceneView.sunBloom) {
-                SceneView._sunPostProcess = new SunPostProcess();
-            } else if(defined(SceneView._sunPostProcess)){
-                SceneView._sunPostProcess = SceneView._sunPostProcess.destroy();
-            }
-
-            SceneView._sunBloom = SceneView.sunBloom;
-        } else if (!defined(SceneView.sun) && defined(SceneView._sunPostProcess)) {
-            SceneView._sunPostProcess = SceneView._sunPostProcess.destroy();
-            SceneView._sunBloom = false;
-        }
-
-        // Manage celestial and terrestrial environment effects.
-        var skyBoxCommand = (frameState.passes.render && defined(SceneView.skyBox)) ? SceneView.skyBox.update(context, frameState) : undefined;
-        var skyAtmosphereCommand = (frameState.passes.render && defined(SceneView.skyAtmosphere)) ? SceneView.skyAtmosphere.update(context, frameState) : undefined;
-        var sunCommand = (frameState.passes.render && defined(SceneView.sun)) ? SceneView.sun.update(scene) : undefined;
-
         // Preserve the reference to the original framebuffer.
         var originalFramebuffer = passState.framebuffer;
 
@@ -1187,39 +1119,12 @@ define([
             }
         }
 
-        var sunVisible = isVisible(sunCommand, frameState);
-        if (sunVisible && SceneView.sunBloom) {
-            passState.framebuffer = SceneView._sunPostProcess.update(context);
-        } else if (SceneView._globeDepth.supported) {
+        if (SceneView._globeDepth.supported) {
             passState.framebuffer = SceneView._globeDepth.framebuffer;
         }
 
         // Update the uniforms based on the original frustum.
         us.updateFrustum(frustum);
-
-        // Ideally, we would render the sky box and atmosphere last for early-z,
-        // but we would have to draw it in each frustum
-        if (defined(skyBoxCommand)) {
-            executeCommand(skyBoxCommand, scene, context, passState);
-        }
-
-        if (defined(skyAtmosphereCommand)) {
-            executeCommand(skyAtmosphereCommand, scene, context, passState);
-        }
-
-        if (defined(sunCommand) && sunVisible) {
-            sunCommand.execute(context, passState);
-            if (SceneView.sunBloom) {
-                var framebuffer;
-                if (SceneView._globeDepth.supported) {
-                    framebuffer = SceneView._globeDepth.framebuffer;
-                } else {
-                    framebuffer = originalFramebuffer;
-                }
-                SceneView._sunPostProcess.execute(context, framebuffer);
-                passState.framebuffer = framebuffer;
-            }
-        }
 
         // Execute commands in each frustum in back to front order
         var depthClearCommand = SceneView._depthClearCommand;
@@ -1292,10 +1197,6 @@ define([
         }
 
         SceneView._primitives.update(context, frameState, commandList);
-
-        if (defined(SceneView.moon)) {
-            SceneView.moon.update(context, frameState, commandList);
-        }
     }
 
     function callAfterRenderFunctions(frameState) {
@@ -1437,11 +1338,7 @@ define([
         this._screenSpaceCameraController = this._screenSpaceCameraController && this._screenSpaceCameraController.destroy();
         this._primitives = this._primitives && this._primitives.destroy();
         this._globe = this._globe && this._globe.destroy();
-        this.skyBox = this.skyBox && this.skyBox.destroy();
-        this.skyAtmosphere = this.skyAtmosphere && this.skyAtmosphere.destroy();
         this._debugSphere = this._debugSphere && this._debugSphere.destroy();
-        this.sun = this.sun && this.sun.destroy();
-        this._sunPostProcess = this._sunPostProcess && this._sunPostProcess.destroy();
 
         this._globeDepth.destroy();
 
