@@ -45,7 +45,6 @@ define([
         './Primitive',
         './PrimitiveCollection',
         './SceneMode',
-        './SceneTransforms',
         './SceneTransitioner',
         './ScreenSpaceCameraController',
         './SunPostProcess',
@@ -96,7 +95,6 @@ define([
         Primitive,
         PrimitiveCollection,
         SceneMode,
-        SceneTransforms,
         SceneTransitioner,
         ScreenSpaceCameraController,
         SunPostProcess,
@@ -216,8 +214,6 @@ define([
         this._frustumCommandsList = [];
         this._overlayCommandList = [];
 
-        this._pickFramebuffer = undefined;
-
         this._useOIT = defaultValue(options.orderIndependentTranslucency, true);
         this._executeOITFunction = undefined;
 
@@ -239,8 +235,6 @@ define([
             owner : this
         });
 
-        this._transitioner = new SceneTransitioner(this);
-
         this._renderError = new Event();
         this._preRender = new Event();
         this._postRender = new Event();
@@ -255,15 +249,6 @@ define([
          * @default false
          */
         this.rethrowRenderErrors = false;
-
-        /**
-         * Determines whether or not to instantly complete the
-         * scene transition animation on user input.
-         *
-         * @type {Boolean}
-         * @default true
-         */
-        this.completeMorphOnUserInput = true;
 
         /**
          * The event fired at the beginning of a scene transition.
@@ -1420,15 +1405,6 @@ define([
         }
     }
 
-    function executeOverlayCommands(scene, passState) {
-        var context = scene.context;
-        var commandList = scene._overlayCommandList;
-        var length = commandList.length;
-        for (var i = 0; i < length; ++i) {
-            commandList[i].execute(context, passState);
-        }
-    }
-
     function updatePrimitives(scene) {
         var context = scene.context;
         var frameState = scene._frameState;
@@ -1497,7 +1473,6 @@ define([
         var passState = scene._passState;
 
         executeCommands(scene, passState, defaultValue(scene.backgroundColor, Color.BLACK));
-        executeOverlayCommands(scene, passState);
 
         frameState.creditDisplay.endFrame();
 
@@ -1550,281 +1525,6 @@ define([
         return Math.max(context.minimumAliasedLineWidth, Math.min(width, context.maximumAliasedLineWidth));
     };
 
-    var orthoPickingFrustum = new OrthographicFrustum();
-    var scratchOrigin = new Cartesian3();
-    var scratchDirection = new Cartesian3();
-    var scratchBufferDimensions = new Cartesian2();
-    var scratchPixelSize = new Cartesian2();
-    var scratchPickVolumeMatrix4 = new Matrix4();
-
-    function getPickOrthographicCullingVolume(scene, drawingBufferPosition, width, height) {
-        var camera = scene._camera;
-        var frustum = camera.frustum;
-
-        var drawingBufferWidth = scene.drawingBufferWidth;
-        var drawingBufferHeight = scene.drawingBufferHeight;
-
-        var x = (2.0 / drawingBufferWidth) * drawingBufferPosition.x - 1.0;
-        x *= (frustum.right - frustum.left) * 0.5;
-        var y = (2.0 / drawingBufferHeight) * (drawingBufferHeight - drawingBufferPosition.y) - 1.0;
-        y *= (frustum.top - frustum.bottom) * 0.5;
-
-        var transform = Matrix4.clone(camera.transform, scratchPickVolumeMatrix4);
-        camera._setTransform(Matrix4.IDENTITY);
-
-        var origin = Cartesian3.clone(camera.position, scratchOrigin);
-        Cartesian3.multiplyByScalar(camera.right, x, scratchDirection);
-        Cartesian3.add(scratchDirection, origin, origin);
-        Cartesian3.multiplyByScalar(camera.up, y, scratchDirection);
-        Cartesian3.add(scratchDirection, origin, origin);
-
-        camera._setTransform(transform);
-
-        Cartesian3.fromElements(origin.z, origin.x, origin.y, origin);
-
-        scratchBufferDimensions.x = drawingBufferWidth;
-        scratchBufferDimensions.y = drawingBufferHeight;
-
-        var pixelSize = frustum.getPixelSize(scratchBufferDimensions, undefined, scratchPixelSize);
-
-        var ortho = orthoPickingFrustum;
-        ortho.right = pixelSize.x * 0.5;
-        ortho.left = -ortho.right;
-        ortho.top = pixelSize.y * 0.5;
-        ortho.bottom = -ortho.top;
-        ortho.near = frustum.near;
-        ortho.far = frustum.far;
-
-        return ortho.computeCullingVolume(origin, camera.directionWC, camera.upWC);
-    }
-
-    var perspPickingFrustum = new PerspectiveOffCenterFrustum();
-
-    function getPickPerspectiveCullingVolume(scene, drawingBufferPosition, width, height) {
-        var camera = scene._camera;
-        var frustum = camera.frustum;
-        var near = frustum.near;
-
-        var drawingBufferWidth = scene.drawingBufferWidth;
-        var drawingBufferHeight = scene.drawingBufferHeight;
-
-        var tanPhi = Math.tan(frustum.fovy * 0.5);
-        var tanTheta = frustum.aspectRatio * tanPhi;
-
-        var x = (2.0 / drawingBufferWidth) * drawingBufferPosition.x - 1.0;
-        var y = (2.0 / drawingBufferHeight) * (drawingBufferHeight - drawingBufferPosition.y) - 1.0;
-
-        var xDir = x * near * tanTheta;
-        var yDir = y * near * tanPhi;
-
-        scratchBufferDimensions.x = drawingBufferWidth;
-        scratchBufferDimensions.y = drawingBufferHeight;
-
-        var pixelSize = frustum.getPixelSize(scratchBufferDimensions, undefined, scratchPixelSize);
-        var pickWidth = pixelSize.x * width * 0.5;
-        var pickHeight = pixelSize.y * height * 0.5;
-
-        var offCenter = perspPickingFrustum;
-        offCenter.top = yDir + pickHeight;
-        offCenter.bottom = yDir - pickHeight;
-        offCenter.right = xDir + pickWidth;
-        offCenter.left = xDir - pickWidth;
-        offCenter.near = near;
-        offCenter.far = frustum.far;
-
-        return offCenter.computeCullingVolume(camera.positionWC, camera.directionWC, camera.upWC);
-    }
-
-    function getPickCullingVolume(scene, drawingBufferPosition, width, height) {
-        if (scene._mode === SceneMode.SCENE2D) {
-            return getPickOrthographicCullingVolume(scene, drawingBufferPosition, width, height);
-        }
-
-        return getPickPerspectiveCullingVolume(scene, drawingBufferPosition, width, height);
-    }
-
-    // pick rectangle width and height, assumed odd
-    var rectangleWidth = 3.0;
-    var rectangleHeight = 3.0;
-    var scratchRectangle = new BoundingRectangle(0.0, 0.0, rectangleWidth, rectangleHeight);
-    var scratchColorZero = new Color(0.0, 0.0, 0.0, 0.0);
-    var scratchPosition = new Cartesian2();
-
-    /**
-     * Returns an object with a `primitive` property that contains the first (top) primitive in the scene
-     * at a particular window coordinate or undefined if nothing is at the location. Other properties may
-     * potentially be set depending on the type of primitive.
-     *
-     * @param {Cartesian2} windowPosition Window coordinates to perform picking on.
-     * @returns {Object} Object containing the picked primitive.
-     *
-     * @exception {DeveloperError} windowPosition is undefined.
-     */
-    Scene.prototype.pick = function(windowPosition) {
-        //>>includeStart('debug', pragmas.debug);
-        if(!defined(windowPosition)) {
-            throw new DeveloperError('windowPosition is undefined.');
-        }
-        //>>includeEnd('debug');
-
-        var context = this._context;
-        var us = context.uniformState;
-        var frameState = this._frameState;
-
-        var drawingBufferPosition = SceneTransforms.transformWindowToDrawingBuffer(this, windowPosition, scratchPosition);
-
-        if (!defined(this._pickFramebuffer)) {
-            this._pickFramebuffer = context.createPickFramebuffer();
-        }
-
-        // Update with previous frame's number and time, assuming that render is called before picking.
-        updateFrameState(this, frameState.frameNumber, frameState.time);
-        frameState.cullingVolume = getPickCullingVolume(this, drawingBufferPosition, rectangleWidth, rectangleHeight);
-        frameState.passes.pick = true;
-
-        us.update(context, frameState);
-
-        this._commandList.length = 0;
-        updatePrimitives(this);
-        createPotentiallyVisibleSet(this);
-
-        scratchRectangle.x = drawingBufferPosition.x - ((rectangleWidth - 1.0) * 0.5);
-        scratchRectangle.y = (this.drawingBufferHeight - drawingBufferPosition.y) - ((rectangleHeight - 1.0) * 0.5);
-
-        executeCommands(this, this._pickFramebuffer.begin(scratchRectangle), scratchColorZero, true);
-        var object = this._pickFramebuffer.end(scratchRectangle);
-        context.endFrame();
-        callAfterRenderFunctions(frameState);
-        return object;
-    };
-
-    /**
-     * Returns a list of objects, each containing a `primitive` property, for all primitives at
-     * a particular window coordinate position. Other properties may also be set depending on the
-     * type of primitive. The primitives in the list are ordered by their visual order in the
-     * scene (front to back).
-     *
-     * @param {Cartesian2} windowPosition Window coordinates to perform picking on.
-     * @returns {Object[]} Array of objects, each containing 1 picked primitives.
-     *
-     * @exception {DeveloperError} windowPosition is undefined.
-     *
-     * @example
-     * var pickedObjects = Cesium.Scene.drillPick(new Cesium.Cartesian2(100.0, 200.0));
-     */
-    Scene.prototype.drillPick = function(windowPosition) {
-        // PERFORMANCE_IDEA: This function calls each primitive's update for each pass. Instead
-        // we could update the primitive once, and then just execute their commands for each pass,
-        // and cull commands for picked primitives.  e.g., base on the command's owner.
-
-        //>>includeStart('debug', pragmas.debug);
-        if (!defined(windowPosition)) {
-            throw new DeveloperError('windowPosition is undefined.');
-        }
-        //>>includeEnd('debug');
-
-        var i;
-        var attributes;
-        var result = [];
-        var pickedPrimitives = [];
-        var pickedAttributes = [];
-
-        var pickedResult = this.pick(windowPosition);
-        while (defined(pickedResult) && defined(pickedResult.primitive)) {
-            result.push(pickedResult);
-
-            var primitive = pickedResult.primitive;
-            var hasShowAttribute = false;
-
-            //If the picked object has a show attribute, use it.
-            if (typeof primitive.getGeometryInstanceAttributes === 'function') {
-                if (defined(pickedResult.id)) {
-                    attributes = primitive.getGeometryInstanceAttributes(pickedResult.id);
-                    if (defined(attributes) && defined(attributes.show)) {
-                        hasShowAttribute = true;
-                        attributes.show = ShowGeometryInstanceAttribute.toValue(false, attributes.show);
-                        pickedAttributes.push(attributes);
-                    }
-                }
-            }
-
-            //Otherwise, hide the entire primitive
-            if (!hasShowAttribute) {
-                primitive.show = false;
-                pickedPrimitives.push(primitive);
-            }
-
-            pickedResult = this.pick(windowPosition);
-        }
-
-        // unhide everything we hid while drill picking
-        for (i = 0; i < pickedPrimitives.length; ++i) {
-            pickedPrimitives[i].show = true;
-        }
-
-        for (i = 0; i < pickedAttributes.length; ++i) {
-            attributes = pickedAttributes[i];
-            attributes.show = ShowGeometryInstanceAttribute.toValue(true, attributes.show);
-        }
-
-        return result;
-    };
-
-    /**
-     * Instantly completes an active transition.
-     */
-    Scene.prototype.completeMorph = function(){
-        this._transitioner.completeMorph();
-    };
-
-    /**
-     * Asynchronously transitions the scene to 2D.
-     * @param {Number} [duration=2.0] The amount of time, in seconds, for transition animations to complete.
-     */
-    Scene.prototype.morphTo2D = function(duration) {
-        var ellipsoid;
-        var globe = this.globe;
-        if (defined(globe)) {
-            ellipsoid = globe.ellipsoid;
-        } else {
-            ellipsoid = this.mapProjection.ellipsoid;
-        }
-        duration = defaultValue(duration, 2.0);
-        this._transitioner.morphTo2D(duration, ellipsoid);
-    };
-
-    /**
-     * Asynchronously transitions the scene to Columbus View.
-     * @param {Number} [duration=2.0] The amount of time, in seconds, for transition animations to complete.
-     */
-    Scene.prototype.morphToColumbusView = function(duration) {
-        var ellipsoid;
-        var globe = this.globe;
-        if (defined(globe)) {
-            ellipsoid = globe.ellipsoid;
-        } else {
-            ellipsoid = this.mapProjection.ellipsoid;
-        }
-        duration = defaultValue(duration, 2.0);
-        this._transitioner.morphToColumbusView(duration, ellipsoid);
-    };
-
-    /**
-     * Asynchronously transitions the scene to 3D.
-     * @param {Number} [duration=2.0] The amount of time, in seconds, for transition animations to complete.
-     */
-    Scene.prototype.morphTo3D = function(duration) {
-        var ellipsoid;
-        var globe = this.globe;
-        if (defined(globe)) {
-            ellipsoid = globe.ellipsoid;
-        } else {
-            ellipsoid = this.mapProjection.ellipsoid;
-        }
-        duration = defaultValue(duration, 2.0);
-        this._transitioner.morphTo3D(duration, ellipsoid);
-    };
-
     /**
      * Returns true if this object was destroyed; otherwise, false.
      * <br /><br />
@@ -1859,7 +1559,6 @@ define([
     Scene.prototype.destroy = function() {
         this._tweens.removeAll();
         this._screenSpaceCameraController = this._screenSpaceCameraController && this._screenSpaceCameraController.destroy();
-        this._pickFramebuffer = this._pickFramebuffer && this._pickFramebuffer.destroy();
         this._primitives = this._primitives && this._primitives.destroy();
         this._globe = this._globe && this._globe.destroy();
         this.skyBox = this.skyBox && this.skyBox.destroy();
@@ -1867,8 +1566,6 @@ define([
         this._debugSphere = this._debugSphere && this._debugSphere.destroy();
         this.sun = this.sun && this.sun.destroy();
         this._sunPostProcess = this._sunPostProcess && this._sunPostProcess.destroy();
-
-        this._transitioner.destroy();
 
         this._globeDepth.destroy();
         if (defined(this._oit)) {
