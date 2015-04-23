@@ -41,10 +41,7 @@ define([
         './PerspectiveOffCenterFrustum',
         './Primitive',
         './PrimitiveCollection',
-        './SceneMode',
-        './SceneTransitioner',
-        './ScreenSpaceCameraController',
-        './TweenCollection'
+        './SceneMode'
     ], function(
         BoundingRectangle,
         BoundingSphere,
@@ -87,10 +84,7 @@ define([
         PerspectiveOffCenterFrustum,
         Primitive,
         PrimitiveCollection,
-        SceneMode,
-        SceneTransitioner,
-        ScreenSpaceCameraController,
-        TweenCollection) {
+        SceneMode) {
     "use strict";
 
     /**
@@ -195,8 +189,6 @@ define([
         this._context = context;
         this._globe = undefined;
         this._primitives = new PrimitiveCollection();
-
-        this._tweens = new TweenCollection();
 
         this._shaderFrameCount = 0;
 
@@ -322,18 +314,6 @@ define([
         /**
          * This property is for debugging only; it is not for production use.
          * <p>
-         * Displays frames per second and time between frames.
-         * </p>
-         *
-         * @type Boolean
-         *
-         * @default false
-         */
-        this.debugShowFramesPerSecond = false;
-
-        /**
-         * This property is for debugging only; it is not for production use.
-         * <p>
          * Displays depth information for the indicated frustum.
          * </p>
          *
@@ -357,12 +337,10 @@ define([
          */
         this.debugShowGlobeDepthFrustum = 1;
 
-        this._performanceDisplay = undefined;
         this._debugSphere = undefined;
 
         var camera = new Camera(this);
         this._camera = camera;
-        this._screenSpaceCameraController = new ScreenSpaceCameraController(this);
 
         // initial guess at frustums.
         var near = camera.frustum.near;
@@ -491,20 +469,6 @@ define([
                 return this._camera;
             }
         },
-        // TODO: setCamera
-
-        /**
-         * Gets the controller for camera input handling.
-         * @memberof SceneView.prototype
-         *
-         * @type {ScreenSpaceCameraController}
-         * @readonly
-         */
-        screenSpaceCameraController : {
-            get : function() {
-                return this._screenSpaceCameraController;
-            }
-        },
 
         /**
          * Get the map projection to use in 2D and Columbus View modes.
@@ -534,21 +498,6 @@ define([
         frameState : {
             get: function() {
                 return this._frameState;
-            }
-        },
-
-        /**
-         * Gets the collection of tweens taking place in the SceneView.
-         * @memberof SceneView.prototype
-         *
-         * @type {TweenCollection}
-         * @readonly
-         *
-         * @private
-         */
-        tweens : {
-            get : function() {
-                return this._tweens;
             }
         },
 
@@ -1219,9 +1168,7 @@ define([
             this._context.shaderCache.destroyReleasedShaderPrograms();
         }
 
-        this._tweens.update();
         this._camera.update(this._mode);
-        this._screenSpaceCameraController.update();
     };
 
     function render(scene, time) {
@@ -1252,26 +1199,6 @@ define([
         executeCommands(scene, passState, defaultValue(SceneView.backgroundColor, Color.BLACK));
 
         frameState.creditDisplay.endFrame();
-
-        if (SceneView.debugShowFramesPerSecond) {
-            if (!defined(SceneView._performanceDisplay)) {
-                var performanceContainer = document.createElement('div');
-                performanceContainer.className = 'cesium-performanceDisplay';
-                performanceContainer.style.position = 'absolute';
-                performanceContainer.style.top = '50px';
-                performanceContainer.style.right = '10px';
-                var container = SceneView._canvas.parentNode;
-                container.appendChild(performanceContainer);
-                var performanceDisplay = new PerformanceDisplay({container: performanceContainer});
-                SceneView._performanceDisplay = performanceDisplay;
-                SceneView._performanceContainer = performanceContainer;
-            }
-
-            SceneView._performanceDisplay.update();
-        } else if (defined(SceneView._performanceDisplay)) {
-            SceneView._performanceDisplay = SceneView._performanceDisplay && SceneView._performanceDisplay.destroy();
-            SceneView._performanceContainer.parentNode.removeChild(SceneView._performanceContainer);
-        }
 
         context.endFrame();
         callAfterRenderFunctions(frameState);
@@ -1334,8 +1261,6 @@ define([
      * scene = scene && SceneView.destroy();
      */
     SceneView.prototype.destroy = function() {
-        this._tweens.removeAll();
-        this._screenSpaceCameraController = this._screenSpaceCameraController && this._screenSpaceCameraController.destroy();
         this._primitives = this._primitives && this._primitives.destroy();
         this._globe = this._globe && this._globe.destroy();
         this._debugSphere = this._debugSphere && this._debugSphere.destroy();
@@ -1344,10 +1269,6 @@ define([
 
         this._context = this._context && this._context.destroy();
         this._frameState.creditDisplay.destroy();
-        if (defined(this._performanceDisplay)){
-            this._performanceDisplay = this._performanceDisplay && this._performanceDisplay.destroy();
-            this._performanceContainer.parentNode.removeChild(this._performanceContainer);
-        }
 
         return destroyObject(this);
     };
