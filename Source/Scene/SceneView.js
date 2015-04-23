@@ -96,7 +96,7 @@ define([
     "use strict";
 
     /**
-     * The container for all 3D graphical objects and state in a Cesium virtual scene.  Generally,
+     * The container for all 3D graphical objects and state in a Cesium virtual SceneView.  Generally,
      * a scene is not created directly; instead, it is implicitly created by {@link CesiumWidget}.
      * <p>
      * <em><code>contextOptions</code> parameter details:</em>
@@ -164,7 +164,7 @@ define([
      *   }
      * });
      */
-    var Scene = function(options) {
+    var SceneView = function(options) {
         options = defaultValue(options, defaultValue.EMPTY_OBJECT);
         var canvas = options.canvas;
         var contextOptions = options.contextOptions;
@@ -239,7 +239,7 @@ define([
          * @type {SkyBox}
          * @default undefined
          *
-         * @see Scene#backgroundColor
+         * @see SceneView#backgroundColor
          */
         this.skyBox = undefined;
 
@@ -277,12 +277,12 @@ define([
         this.moon = undefined;
 
         /**
-         * The background color, which is only visible if there is no sky box, i.e., {@link Scene#skyBox} is undefined.
+         * The background color, which is only visible if there is no sky box, i.e., {@link SceneView#skyBox} is undefined.
          *
          * @type {Color}
          * @default {@link Color.BLACK}
          *
-         * @see Scene#skyBox
+         * @see SceneView#skyBox
          */
         this.backgroundColor = Color.clone(Color.BLACK);
 
@@ -323,13 +323,13 @@ define([
          *
          * @example
          * // Do not execute any commands.
-         * scene.debugCommandFilter = function(command) {
+         * SceneView.debugCommandFilter = function(command) {
          *     return false;
          * };
          *
          * // Execute only the billboard's commands.  That is, only draw the billboard.
          * var billboards = new Cesium.BillboardCollection();
-         * scene.debugCommandFilter = function(command) {
+         * SceneView.debugCommandFilter = function(command) {
          *     return command.owner === billboards;
          * };
          */
@@ -424,10 +424,10 @@ define([
         this.initializeFrame();
     };
 
-    defineProperties(Scene.prototype, {
+    defineProperties(SceneView.prototype, {
         /**
          * Gets the canvas element to which this scene is bound.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {Element}
          * @readonly
@@ -440,7 +440,7 @@ define([
 
         /**
          * The drawingBufferWidth of the underlying GL context.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {Number}
          * @readonly
@@ -455,7 +455,7 @@ define([
 
         /**
          * The drawingBufferHeight of the underlying GL context.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {Number}
          * @readonly
@@ -470,7 +470,7 @@ define([
 
         /**
          * The maximum aliased line width, in pixels, supported by this WebGL implementation.  It will be at least one.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {Number}
          * @readonly
@@ -485,7 +485,7 @@ define([
 
         /**
          * The maximum length in pixels of one edge of a cube map, supported by this WebGL implementation.  It will be at least 16.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {Number}
          * @readonly
@@ -500,7 +500,7 @@ define([
 
         /**
          * Gets or sets the depth-test ellipsoid.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {Globe}
          */
@@ -517,7 +517,7 @@ define([
 
         /**
          * Gets the collection of primitives.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {PrimitiveCollection}
          * @readonly
@@ -530,7 +530,7 @@ define([
 
         /**
          * Gets the camera.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {Camera}
          * @readonly
@@ -544,7 +544,7 @@ define([
 
         /**
          * Gets the controller for camera input handling.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {ScreenSpaceCameraController}
          * @readonly
@@ -557,7 +557,7 @@ define([
 
         /**
          * Get the map projection to use in 2D and Columbus View modes.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {MapProjection}
          * @readonly
@@ -571,9 +571,9 @@ define([
         },
 
         /**
-         * Gets state information about the current scene. If called outside of a primitive's <code>update</code>
+         * Gets state information about the current SceneView. If called outside of a primitive's <code>update</code>
          * function, the previous frame's state is returned.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {FrameState}
          * @readonly
@@ -587,8 +587,8 @@ define([
         },
 
         /**
-         * Gets the collection of tweens taking place in the scene.
-         * @memberof Scene.prototype
+         * Gets the collection of tweens taking place in the SceneView.
+         * @memberof SceneView.prototype
          *
          * @type {TweenCollection}
          * @readonly
@@ -603,7 +603,7 @@ define([
 
         /**
          * Gets the collection of image layers that will be rendered on the globe.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {ImageryLayerCollection}
          * @readonly
@@ -616,7 +616,7 @@ define([
 
         /**
          * The terrain provider providing surface geometry for the globe.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {TerrainProvider}
          */
@@ -634,7 +634,7 @@ define([
          * The Scene instance and the thrown error are the only two parameters passed to the event handler.
          * By default, errors are not rethrown after this event is raised, but that can be changed by setting
          * the <code>rethrowRenderErrors</code> property.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {Event}
          * @readonly
@@ -648,7 +648,7 @@ define([
         /**
          * Gets the event that will be raised at the start of each call to <code>render</code>.  Subscribers to the event
          * receive the Scene instance as the first parameter and the current time as the second parameter.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {Event}
          * @readonly
@@ -662,7 +662,7 @@ define([
         /**
          * Gets the event that will be raised at the end of each call to <code>render</code>.  Subscribers to the event
          * receive the Scene instance as the first parameter and the current time as the second parameter.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {Event}
          * @readonly
@@ -674,7 +674,7 @@ define([
         },
 
         /**
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          * @private
          * @readonly
          */
@@ -687,7 +687,7 @@ define([
         /**
          * This property is for debugging only; it is not for production use.
          * <p>
-         * When {@link Scene.debugShowFrustums} is <code>true</code>, this contains
+         * When {@link SceneView.debugShowFrustums} is <code>true</code>, this contains
          * properties with statistics about the number of command execute per frustum.
          * <code>totalCommands</code> is the total number of commands executed, ignoring
          * overlap. <code>commandsInFrustums</code> is an array with the number of times
@@ -695,7 +695,7 @@ define([
          * three frustums.
          * </p>
          *
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          *
          * @type {Object}
          * @readonly
@@ -710,7 +710,7 @@ define([
 
         /**
          * Gets whether or not the scene is optimized for 3D only viewing.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          * @type {Boolean}
          * @readonly
          */
@@ -721,8 +721,8 @@ define([
         },
 
         /**
-         * Gets the unique identifier for this scene.
-         * @memberof Scene.prototype
+         * Gets the unique identifier for this SceneView.
+         * @memberof SceneView.prototype
          * @type {String}
          * @readonly
          */
@@ -733,8 +733,8 @@ define([
         },
 
         /**
-         * Gets or sets the current mode of the scene.
-         * @memberof Scene.prototype
+         * Gets or sets the current mode of the SceneView.
+         * @memberof SceneView.prototype
          * @type {SceneMode}
          * @default {@link SceneMode.SCENE3D}
          */
@@ -752,7 +752,7 @@ define([
 
         /**
          * Gets the number of frustums used in the last frame.
-         * @memberof Scene.prototype
+         * @memberof SceneView.prototype
          * @type {Number}
          *
          * @private
@@ -770,11 +770,11 @@ define([
     function getOccluder(scene) {
         // TODO: The occluder is the top-level globe. When we add
         //       support for multiple central bodies, this should be the closest one.
-        var globe = scene.globe;
-        if (scene._mode === SceneMode.SCENE3D && defined(globe)) {
+        var globe = SceneView.globe;
+        if (SceneView._mode === SceneMode.SCENE3D && defined(globe)) {
             var ellipsoid = globe.ellipsoid;
             scratchOccluderBoundingSphere.radius = ellipsoid.minimumRadius;
-            scratchOccluder = Occluder.fromBoundingSphere(scratchOccluderBoundingSphere, scene._camera.positionWC, scratchOccluder);
+            scratchOccluder = Occluder.fromBoundingSphere(scratchOccluderBoundingSphere, SceneView._camera.positionWC, scratchOccluder);
             return scratchOccluder;
         }
 
@@ -787,12 +787,12 @@ define([
     }
 
     function updateFrameState(scene, frameNumber, time) {
-        var camera = scene._camera;
+        var camera = SceneView._camera;
 
-        var frameState = scene._frameState;
-        frameState.mode = scene._mode;
-        frameState.morphTime = scene.morphTime;
-        frameState.mapProjection = scene.mapProjection;
+        var frameState = SceneView._frameState;
+        frameState.mode = SceneView._mode;
+        frameState.morphTime = SceneView.morphTime;
+        frameState.mapProjection = SceneView.mapProjection;
         frameState.frameNumber = frameNumber;
         frameState.time = JulianDate.clone(time, frameState.time);
         frameState.camera = camera;
@@ -819,11 +819,11 @@ define([
     }
 
     function insertIntoBin(scene, command, distance) {
-        if (scene.debugShowFrustums) {
+        if (SceneView.debugShowFrustums) {
             command.debugOverlappingFrustums = 0;
         }
 
-        var frustumCommandsList = scene._frustumCommandsList;
+        var frustumCommandsList = SceneView._frustumCommandsList;
         var length = frustumCommandsList.length;
 
         for (var i = 0; i < length; ++i) {
@@ -843,7 +843,7 @@ define([
             var index = frustumCommands.indices[pass]++;
             frustumCommands.commands[pass][index] = command;
 
-            if (scene.debugShowFrustums) {
+            if (SceneView.debugShowFrustums) {
                 command.debugOverlappingFrustums |= (1 << i);
             }
 
@@ -852,10 +852,10 @@ define([
             }
         }
 
-        if (scene.debugShowFrustums) {
-            var cf = scene._debugFrustumStatistics.commandsInFrustums;
+        if (SceneView.debugShowFrustums) {
+            var cf = SceneView._debugFrustumStatistics.commandsInFrustums;
             cf[command.debugOverlappingFrustums] = defined(cf[command.debugOverlappingFrustums]) ? cf[command.debugOverlappingFrustums] + 1 : 1;
-            ++scene._debugFrustumStatistics.totalCommands;
+            ++SceneView._debugFrustumStatistics.totalCommands;
         }
     }
 
@@ -863,22 +863,22 @@ define([
     var distances = new Interval();
 
     function createPotentiallyVisibleSet(scene) {
-        var commandList = scene._commandList;
+        var commandList = SceneView._commandList;
 
-        var cullingVolume = scene._frameState.cullingVolume;
-        var camera = scene._camera;
+        var cullingVolume = SceneView._frameState.cullingVolume;
+        var camera = SceneView._camera;
 
         var direction = camera.directionWC;
         var position = camera.positionWC;
 
-        if (scene.debugShowFrustums) {
-            scene._debugFrustumStatistics = {
+        if (SceneView.debugShowFrustums) {
+            SceneView._debugFrustumStatistics = {
                 totalCommands : 0,
                 commandsInFrustums : {}
             };
         }
 
-        var frustumCommandsList = scene._frustumCommandsList;
+        var frustumCommandsList = SceneView._frustumCommandsList;
         var numberOfFrustums = frustumCommandsList.length;
         var numberOfPasses = Pass.NUMBER_OF_PASSES;
         for (var n = 0; n < numberOfFrustums; ++n) {
@@ -892,8 +892,8 @@ define([
         var undefBV = false;
 
         var occluder;
-        if (scene._frameState.mode === SceneMode.SCENE3D) {
-            occluder = scene._frameState.occluder;
+        if (SceneView._frameState.mode === SceneMode.SCENE3D) {
+            occluder = SceneView._frameState.occluder;
         }
 
         // get user culling volume minus the far plane.
@@ -946,7 +946,7 @@ define([
 
         // Exploit temporal coherence. If the frustums haven't changed much, use the frustums computed
         // last frame, else compute the new frustums and sort them by frustum again.
-        var farToNearRatio = scene.farToNearRatio;
+        var farToNearRatio = SceneView.farToNearRatio;
         var numFrustums = Math.ceil(Math.log(far / near) / Math.log(farToNearRatio));
         if (near !== Number.MAX_VALUE && (numFrustums !== numberOfFrustums || (frustumCommandsList.length !== 0 &&
                 (near < frustumCommandsList[0].near || far > frustumCommandsList[numberOfFrustums - 1].far)))) {
@@ -968,7 +968,7 @@ define([
     }
 
     function createDebugFragmentShaderProgram(command, scene, shaderProgram) {
-        var context = scene.context;
+        var context = SceneView.context;
         var sp = defaultValue(shaderProgram, command.shaderProgram);
         var fs = sp.fragmentShaderSource.clone();
 
@@ -982,7 +982,7 @@ define([
             '{ \n' +
             '    czm_Debug_main(); \n';
 
-        if (scene.debugShowCommands) {
+        if (SceneView.debugShowCommands) {
             if (!defined(command._debugColor)) {
                 command._debugColor = Color.fromRandom();
             }
@@ -990,7 +990,7 @@ define([
             newMain += '    gl_FragColor.rgb *= vec3(' + c.red + ', ' + c.green + ', ' + c.blue + '); \n';
         }
 
-        if (scene.debugShowFrustums) {
+        if (SceneView.debugShowFrustums) {
             // Support up to three frustums.  If a command overlaps all
             // three, it's code is not changed.
             var r = (command.debugOverlappingFrustums & (1 << 0)) ? '1.0' : '0.0';
@@ -1011,7 +1011,7 @@ define([
         if (defined(command.shaderProgram) || defined(shaderProgram)) {
             // Replace shader for frustum visualization
             var sp = createDebugFragmentShaderProgram(command, scene, shaderProgram);
-            command.execute(scene.context, passState, renderState, sp);
+            command.execute(SceneView.context, passState, renderState, sp);
             sp.destroy();
         }
     }
@@ -1023,11 +1023,11 @@ define([
     transformFrom2D = Matrix4.inverseTransformation(transformFrom2D, transformFrom2D);
 
     function executeCommand(command, scene, context, passState, renderState, shaderProgram, debugFramebuffer) {
-        if ((defined(scene.debugCommandFilter)) && !scene.debugCommandFilter(command)) {
+        if ((defined(SceneView.debugCommandFilter)) && !SceneView.debugCommandFilter(command)) {
             return;
         }
 
-        if (scene.debugShowCommands || scene.debugShowFrustums) {
+        if (SceneView.debugShowCommands || SceneView.debugShowFrustums) {
             executeDebugCommand(command, scene, passState, renderState, shaderProgram);
         } else {
             command.execute(context, passState, renderState, shaderProgram);
@@ -1036,11 +1036,11 @@ define([
         if (command.debugShowBoundingVolume && (defined(command.boundingVolume))) {
             // Debug code to draw bounding volume for command.  Not optimized!
             // Assumes bounding volume is a bounding sphere.
-            if (defined(scene._debugSphere)) {
-                scene._debugSphere.destroy();
+            if (defined(SceneView._debugSphere)) {
+                SceneView._debugSphere.destroy();
             }
 
-            var frameState = scene._frameState;
+            var frameState = SceneView._frameState;
             var boundingVolume = command.boundingVolume;
             var radius = boundingVolume.radius;
             var center = boundingVolume.center;
@@ -1057,7 +1057,7 @@ define([
                 center = projection.ellipsoid.cartographicToCartesian(centerCartographic);
             }
 
-            scene._debugSphere = new Primitive({
+            SceneView._debugSphere = new Primitive({
                 geometryInstances : new GeometryInstance({
                     geometry : geometry,
                     modelMatrix : Matrix4.multiplyByTranslation(Matrix4.IDENTITY, center, new Matrix4()),
@@ -1073,7 +1073,7 @@ define([
             });
 
             var commandList = [];
-            scene._debugSphere.update(context, frameState, commandList);
+            SceneView._debugSphere.update(context, frameState, commandList);
 
             var framebuffer;
             if (defined(debugFramebuffer)) {
@@ -1114,10 +1114,10 @@ define([
     }
 
     function getDebugGlobeDepth(scene, context, index) {
-        var globeDepth = scene._debugGlobeDepths[index];
+        var globeDepth = SceneView._debugGlobeDepths[index];
         if (!defined(globeDepth)) {
             globeDepth = new GlobeDepth(context);
-            scene._debugGlobeDepths[index] = globeDepth;
+            SceneView._debugGlobeDepths[index] = globeDepth;
         }
         return globeDepth;
     }
@@ -1130,29 +1130,29 @@ define([
         var i;
         var j;
 
-        var frameState = scene._frameState;
-        var camera = scene._camera;
-        var context = scene.context;
+        var frameState = SceneView._frameState;
+        var camera = SceneView._camera;
+        var context = SceneView.context;
         var us = context.uniformState;
 
         // Manage sun bloom post-processing effect.
-        if (defined(scene.sun) && scene.sunBloom !== scene._sunBloom) {
-            if (scene.sunBloom) {
-                scene._sunPostProcess = new SunPostProcess();
-            } else if(defined(scene._sunPostProcess)){
-                scene._sunPostProcess = scene._sunPostProcess.destroy();
+        if (defined(SceneView.sun) && SceneView.sunBloom !== SceneView._sunBloom) {
+            if (SceneView.sunBloom) {
+                SceneView._sunPostProcess = new SunPostProcess();
+            } else if(defined(SceneView._sunPostProcess)){
+                SceneView._sunPostProcess = SceneView._sunPostProcess.destroy();
             }
 
-            scene._sunBloom = scene.sunBloom;
-        } else if (!defined(scene.sun) && defined(scene._sunPostProcess)) {
-            scene._sunPostProcess = scene._sunPostProcess.destroy();
-            scene._sunBloom = false;
+            SceneView._sunBloom = SceneView.sunBloom;
+        } else if (!defined(SceneView.sun) && defined(SceneView._sunPostProcess)) {
+            SceneView._sunPostProcess = SceneView._sunPostProcess.destroy();
+            SceneView._sunBloom = false;
         }
 
         // Manage celestial and terrestrial environment effects.
-        var skyBoxCommand = (frameState.passes.render && defined(scene.skyBox)) ? scene.skyBox.update(context, frameState) : undefined;
-        var skyAtmosphereCommand = (frameState.passes.render && defined(scene.skyAtmosphere)) ? scene.skyAtmosphere.update(context, frameState) : undefined;
-        var sunCommand = (frameState.passes.render && defined(scene.sun)) ? scene.sun.update(scene) : undefined;
+        var skyBoxCommand = (frameState.passes.render && defined(SceneView.skyBox)) ? SceneView.skyBox.update(context, frameState) : undefined;
+        var skyAtmosphereCommand = (frameState.passes.render && defined(SceneView.skyAtmosphere)) ? SceneView.skyAtmosphere.update(context, frameState) : undefined;
+        var sunCommand = (frameState.passes.render && defined(SceneView.sun)) ? SceneView.sun.update(scene) : undefined;
 
         // Preserve the reference to the original framebuffer.
         var originalFramebuffer = passState.framebuffer;
@@ -1168,17 +1168,17 @@ define([
         }
 
         // Clear the pass state framebuffer.
-        var clearColorCommand = scene._clearColorCommand;
+        var clearColorCommand = SceneView._clearColorCommand;
         Color.clone(clearColor, clearColorCommand.color);
         clearColorCommand.execute(context, passState);
 
         // Update globe depth rendering based on the current context and clear the globe depth framebuffer.
-        scene._globeDepth.update(context);
-        scene._globeDepth.clear(context, passState, clearColor);
+        SceneView._globeDepth.update(context);
+        SceneView._globeDepth.clear(context, passState, clearColor);
 
         // Determine if there are any translucent surfaces in any of the frustums.
         var renderTranslucentCommands = false;
-        var frustumCommandsList = scene._frustumCommandsList;
+        var frustumCommandsList = SceneView._frustumCommandsList;
         var numFrustums = frustumCommandsList.length;
         for (i = 0; i < numFrustums; ++i) {
             if (frustumCommandsList[i].indices[Pass.TRANSLUCENT] > 0) {
@@ -1188,10 +1188,10 @@ define([
         }
 
         var sunVisible = isVisible(sunCommand, frameState);
-        if (sunVisible && scene.sunBloom) {
-            passState.framebuffer = scene._sunPostProcess.update(context);
-        } else if (scene._globeDepth.supported) {
-            passState.framebuffer = scene._globeDepth.framebuffer;
+        if (sunVisible && SceneView.sunBloom) {
+            passState.framebuffer = SceneView._sunPostProcess.update(context);
+        } else if (SceneView._globeDepth.supported) {
+            passState.framebuffer = SceneView._globeDepth.framebuffer;
         }
 
         // Update the uniforms based on the original frustum.
@@ -1209,20 +1209,20 @@ define([
 
         if (defined(sunCommand) && sunVisible) {
             sunCommand.execute(context, passState);
-            if (scene.sunBloom) {
+            if (SceneView.sunBloom) {
                 var framebuffer;
-                if (scene._globeDepth.supported) {
-                    framebuffer = scene._globeDepth.framebuffer;
+                if (SceneView._globeDepth.supported) {
+                    framebuffer = SceneView._globeDepth.framebuffer;
                 } else {
                     framebuffer = originalFramebuffer;
                 }
-                scene._sunPostProcess.execute(context, framebuffer);
+                SceneView._sunPostProcess.execute(context, framebuffer);
                 passState.framebuffer = framebuffer;
             }
         }
 
         // Execute commands in each frustum in back to front order
-        var depthClearCommand = scene._depthClearCommand;
+        var depthClearCommand = SceneView._depthClearCommand;
         for (i = 0; i < numFrustums; ++i) {
             var index = numFrustums - i - 1;
             var frustumCommands = frustumCommandsList[index];
@@ -1234,10 +1234,10 @@ define([
                 frustum.near *= 0.99;
             }
 
-            var globeDepth = scene.debugShowGlobeDepth ? getDebugGlobeDepth(scene, context, index) : scene._globeDepth;
+            var globeDepth = SceneView.debugShowGlobeDepth ? getDebugGlobeDepth(scene, context, index) : SceneView._globeDepth;
 
             var fb;
-            if (scene.debugShowGlobeDepth) {
+            if (SceneView.debugShowGlobeDepth) {
                 fb = passState.framebuffer;
                 passState.framebuffer = globeDepth.framebuffer;
             }
@@ -1254,7 +1254,7 @@ define([
             globeDepth.update(context);
             globeDepth.executeCopyDepth(context, passState);
 
-            if (scene.debugShowGlobeDepth) {
+            if (SceneView.debugShowGlobeDepth) {
                 passState.framebuffer = fb;
             }
 
@@ -1273,28 +1273,28 @@ define([
             us.updateFrustum(frustum);
         }
 
-        if (scene.debugShowGlobeDepth) {
-            var gd = getDebugGlobeDepth(scene, context, scene.debugShowGlobeDepthFrustum - 1);
+        if (SceneView.debugShowGlobeDepth) {
+            var gd = getDebugGlobeDepth(scene, context, SceneView.debugShowGlobeDepthFrustum - 1);
             gd.executeDebugGlobeDepth(context, passState);
         }
 
         passState.framebuffer = originalFramebuffer;
-        scene._globeDepth.executeCopyColor(context, passState);
+        SceneView._globeDepth.executeCopyColor(context, passState);
     }
 
     function updatePrimitives(scene) {
-        var context = scene.context;
-        var frameState = scene._frameState;
-        var commandList = scene._commandList;
+        var context = SceneView.context;
+        var frameState = SceneView._frameState;
+        var commandList = SceneView._commandList;
 
-        if (scene._globe) {
-            scene._globe.update(context, frameState, commandList);
+        if (SceneView._globe) {
+            SceneView._globe.update(context, frameState, commandList);
         }
 
-        scene._primitives.update(context, frameState, commandList);
+        SceneView._primitives.update(context, frameState, commandList);
 
-        if (defined(scene.moon)) {
-            scene.moon.update(context, frameState, commandList);
+        if (defined(SceneView.moon)) {
+            SceneView.moon.update(context, frameState, commandList);
         }
     }
 
@@ -1311,7 +1311,7 @@ define([
     /**
      * @private
      */
-    Scene.prototype.initializeFrame = function() {
+    SceneView.prototype.initializeFrame = function() {
         // Destroy released shaders once every 120 frames to avoid thrashing the cache
         if (this._shaderFrameCount++ === 120) {
             this._shaderFrameCount = 0;
@@ -1328,60 +1328,60 @@ define([
             time = JulianDate.now();
         }
 
-        scene._preRender.raiseEvent(scene, time);
+        SceneView._preRender.raiseEvent(scene, time);
 
-        var us = scene.context.uniformState;
-        var frameState = scene._frameState;
+        var us = SceneView.context.uniformState;
+        var frameState = SceneView._frameState;
 
         var frameNumber = CesiumMath.incrementWrap(frameState.frameNumber, 15000000.0, 1.0);
         updateFrameState(scene, frameNumber, time);
         frameState.passes.render = true;
         frameState.creditDisplay.beginFrame();
 
-        var context = scene.context;
+        var context = SceneView.context;
         us.update(context, frameState);
 
-        scene._commandList.length = 0;
+        SceneView._commandList.length = 0;
 
         updatePrimitives(scene);
         createPotentiallyVisibleSet(scene);
 
-        var passState = scene._passState;
+        var passState = SceneView._passState;
 
-        executeCommands(scene, passState, defaultValue(scene.backgroundColor, Color.BLACK));
+        executeCommands(scene, passState, defaultValue(SceneView.backgroundColor, Color.BLACK));
 
         frameState.creditDisplay.endFrame();
 
-        if (scene.debugShowFramesPerSecond) {
-            if (!defined(scene._performanceDisplay)) {
+        if (SceneView.debugShowFramesPerSecond) {
+            if (!defined(SceneView._performanceDisplay)) {
                 var performanceContainer = document.createElement('div');
                 performanceContainer.className = 'cesium-performanceDisplay';
                 performanceContainer.style.position = 'absolute';
                 performanceContainer.style.top = '50px';
                 performanceContainer.style.right = '10px';
-                var container = scene._canvas.parentNode;
+                var container = SceneView._canvas.parentNode;
                 container.appendChild(performanceContainer);
                 var performanceDisplay = new PerformanceDisplay({container: performanceContainer});
-                scene._performanceDisplay = performanceDisplay;
-                scene._performanceContainer = performanceContainer;
+                SceneView._performanceDisplay = performanceDisplay;
+                SceneView._performanceContainer = performanceContainer;
             }
 
-            scene._performanceDisplay.update();
-        } else if (defined(scene._performanceDisplay)) {
-            scene._performanceDisplay = scene._performanceDisplay && scene._performanceDisplay.destroy();
-            scene._performanceContainer.parentNode.removeChild(scene._performanceContainer);
+            SceneView._performanceDisplay.update();
+        } else if (defined(SceneView._performanceDisplay)) {
+            SceneView._performanceDisplay = SceneView._performanceDisplay && SceneView._performanceDisplay.destroy();
+            SceneView._performanceContainer.parentNode.removeChild(SceneView._performanceContainer);
         }
 
         context.endFrame();
         callAfterRenderFunctions(frameState);
 
-        scene._postRender.raiseEvent(scene, time);
+        SceneView._postRender.raiseEvent(scene, time);
     }
 
     /**
      * @private
      */
-    Scene.prototype.render = function(time) {
+    SceneView.prototype.render = function(time) {
         try {
             render(this, time);
         } catch (error) {
@@ -1396,7 +1396,7 @@ define([
     /**
      * @private
      */
-    Scene.prototype.clampLineWidth = function(width) {
+    SceneView.prototype.clampLineWidth = function(width) {
         var context = this._context;
         return Math.max(context.minimumAliasedLineWidth, Math.min(width, context.maximumAliasedLineWidth));
     };
@@ -1409,9 +1409,9 @@ define([
      *
      * @returns {Boolean} <code>true</code> if this object was destroyed; otherwise, <code>false</code>.
      *
-     * @see Scene#destroy
+     * @see SceneView#destroy
      */
-    Scene.prototype.isDestroyed = function() {
+    SceneView.prototype.isDestroyed = function() {
         return false;
     };
 
@@ -1427,12 +1427,12 @@ define([
      *
      * @exception {DeveloperError} This object was destroyed, i.e., destroy() was called.
      *
-     * @see Scene#isDestroyed
+     * @see SceneView#isDestroyed
      *
      * @example
-     * scene = scene && scene.destroy();
+     * scene = scene && SceneView.destroy();
      */
-    Scene.prototype.destroy = function() {
+    SceneView.prototype.destroy = function() {
         this._tweens.removeAll();
         this._screenSpaceCameraController = this._screenSpaceCameraController && this._screenSpaceCameraController.destroy();
         this._primitives = this._primitives && this._primitives.destroy();
@@ -1455,5 +1455,5 @@ define([
         return destroyObject(this);
     };
 
-    return Scene;
+    return SceneView;
 });
