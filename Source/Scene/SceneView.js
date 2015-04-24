@@ -188,8 +188,6 @@ define([
         });
 
         this._renderError = new Event();
-        this._preRender = new Event();
-        this._postRender = new Event();
 
         /**
          * Exceptions occurring in <code>render</code> are always caught in order to raise the
@@ -318,7 +316,7 @@ define([
 
         this._debugSphere = undefined;
 
-        var camera = new Camera(this);
+        var camera = new Camera(scene);
         this._camera = camera;
 
         // initial guess at frustums.
@@ -375,34 +373,6 @@ define([
         renderError : {
             get : function() {
                 return this._renderError;
-            }
-        },
-
-        /**
-         * Gets the event that will be raised at the start of each call to <code>render</code>.  Subscribers to the event
-         * receive the Scene instance as the first parameter and the current time as the second parameter.
-         * @memberof SceneView.prototype
-         *
-         * @type {Event}
-         * @readonly
-         */
-        preRender : {
-            get : function() {
-                return this._preRender;
-            }
-        },
-
-        /**
-         * Gets the event that will be raised at the end of each call to <code>render</code>.  Subscribers to the event
-         * receive the Scene instance as the first parameter and the current time as the second parameter.
-         * @memberof SceneView.prototype
-         *
-         * @type {Event}
-         * @readonly
-         */
-        postRender : {
-            get : function() {
-                return this._postRender;
             }
         },
 
@@ -519,12 +489,13 @@ define([
         passes.pick = false;
     }
 
-    function updateFrameState(scene, frameNumber, time) {
-        var camera = scene._camera;
+    function updateFrameState(sceneView, frameNumber, time) {
+        var scene = sceneView._scene;
+        var camera = sceneView._camera;
+        var frameState = sceneView._frameState;
 
-        var frameState = scene._frameState;
-        frameState.mode = scene._mode;
-        frameState.morphTime = scene.morphTime;
+        frameState.mode = sceneView._mode;
+        frameState.morphTime = sceneView.morphTime;
         frameState.mapProjection = scene.mapProjection;
         frameState.frameNumber = frameNumber;
         frameState.time = JulianDate.clone(time, frameState.time);
@@ -981,16 +952,6 @@ define([
         scene._primitives.update(context, frameState, commandList);
     }
 
-    function callAfterRenderFunctions(frameState) {
-        // Functions are queued up during primitive update and executed here in case
-        // the function modifies scene state that should remain constant over the frame.
-        var functions = frameState.afterRender;
-        for (var i = 0, length = functions.length; i < length; ++i) {
-            functions[i]();
-        }
-        functions.length = 0;
-    }
-
     /**
      * @private
      */
@@ -998,39 +959,25 @@ define([
         this._camera.update(this._mode);
     };
 
-    function render(scene, time) {
-        if (!defined(time)) {
-            time = JulianDate.now();
-        }
+    function render(sceneView, time) {
+        var us = sceneView.context.uniformState;
+        var frameState = sceneView._frameState;
 
-        scene._preRender.raiseEvent(scene, time);
-
-        var us = scene.context.uniformState;
-        var frameState = scene._frameState;
-
-        var frameNumber = CesiumMath.incrementWrap(frameState.frameNumber, 15000000.0, 1.0);
-        updateFrameState(scene, frameNumber, time);
+        updateFrameState(sceneView, frameState.frameNumber, time);
         frameState.passes.render = true;
-        frameState.creditDisplay.beginFrame();
 
-        var context = scene.context;
+        var context = sceneView.context;
         us.update(context, frameState);
 
-        scene._commandList.length = 0;
+        sceneView._commandList.length = 0;
 
+        var scene = sceneView._scene;
         updatePrimitives(scene);
         createPotentiallyVisibleSet(scene);
 
         var passState = scene._passState;
 
         executeCommands(scene, passState, defaultValue(scene.backgroundColor, Color.BLACK));
-
-        frameState.creditDisplay.endFrame();
-
-        context.endFrame();
-        callAfterRenderFunctions(frameState);
-
-        scene._postRender.raiseEvent(scene, time);
     }
 
     /**

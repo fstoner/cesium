@@ -49,6 +49,7 @@ define([
         './SceneTransitioner',
         './ScreenSpaceCameraController',
         './SunPostProcess',
+        './SceneView',
         './TweenCollection'
     ], function(
         BoundingRectangle,
@@ -100,6 +101,7 @@ define([
         SceneTransitioner,
         ScreenSpaceCameraController,
         SunPostProcess,
+        SceneView,
         TweenCollection) {
     "use strict";
 
@@ -1527,12 +1529,19 @@ define([
         scene._postRender.raiseEvent(scene, time);
     }
 
+    var debugSceneView = false;
+
     /**
      * @private
      */
     Scene.prototype.render = function(time) {
         try {
             render(this, time);
+
+            if (debugSceneView) {
+                var view = new SceneView(this, this._frameState);
+                view.render(time);
+            }
         } catch (error) {
             this._renderError.raiseEvent(this, error);
 
