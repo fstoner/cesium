@@ -566,10 +566,10 @@ define([
     var scratchCullingVolume = new CullingVolume();
     var distances = new Interval();
 
-    function createPotentiallyVisibleSet(sceneView) {
+    function createPotentiallyVisibleSet(sceneView, frameState) {
         var commandList = sceneView._commandList;
 
-        var cullingVolume = sceneView._frameState.cullingVolume;
+        var cullingVolume = frameState.cullingVolume;
         var camera = sceneView._camera;
 
         var direction = camera.directionWC;
@@ -596,8 +596,8 @@ define([
         var undefBV = false;
 
         var occluder;
-        if (sceneView._frameState.mode === SceneMode.SCENE3D) {
-            occluder = sceneView._frameState.occluder;
+        if (frameState.mode === SceneMode.SCENE3D) {
+            occluder = frameState.occluder;
         }
 
         // get user culling volume minus the far plane.
@@ -655,7 +655,7 @@ define([
         if (near !== Number.MAX_VALUE && (numFrustums !== numberOfFrustums || (frustumCommandsList.length !== 0 &&
                 (near < frustumCommandsList[0].near || far > frustumCommandsList[numberOfFrustums - 1].far)))) {
             updateFrustums(near, far, farToNearRatio, numFrustums, frustumCommandsList);
-            createPotentiallyVisibleSet(sceneView);
+            createPotentiallyVisibleSet(sceneView, frameState);
         }
     }
 
@@ -940,16 +940,11 @@ define([
         sceneView._globeDepth.executeCopyColor(context, passState);
     }
 
-    function updatePrimitives(sceneView) {
-        var context = sceneView._context;
-        var frameState = sceneView._frameState;
-        var commandList = sceneView._commandList;
-        var scene = sceneView._scene;
-        if (scene._globe) {
-            scene._globe.update(context, frameState, commandList);
+    function updatePrimitives(context, frameState, globe, primitives, commandList) {
+        if (globe) {
+            globe.update(context, frameState, commandList);
         }
-
-        scene._primitives.update(context, frameState, commandList);
+        primitives.update(context, frameState, commandList);
     }
 
     /**
@@ -968,11 +963,12 @@ define([
         var us = context.uniformState;
         us.update(context, frameState);
 
-        sceneView._commandList.length = 0;
+        var scene = sceneView._scene;
+        var commandList = sceneView._commandList;
+        commandList.length = 0;
+        updatePrimitives(context, frameState, scene.globe, scene.primitives, commandList);
 
-        updatePrimitives(sceneView);
-
-        createPotentiallyVisibleSet(sceneView);
+        createPotentiallyVisibleSet(sceneView, frameState);
 
         var passState = sceneView._passState;
         executeCommands(sceneView, passState, defaultValue(sceneView.backgroundColor, Color.BLACK));
