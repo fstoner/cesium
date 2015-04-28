@@ -208,16 +208,6 @@ define([
          */
         this.backgroundColor = Color.clone(Color.BLACK);
 
-        this._mode = SceneMode.SCENE3D;
-
-        /**
-         * The current morph transition time between 2D/Columbus View and 3D,
-         * with 0.0 being 2D or Columbus View and 1.0 being 3D.
-         *
-         * @type {Number}
-         * @default 1.0
-         */
-        this.morphTime = 1.0;
         /**
          * The far-to-near ratio of the multi-frustum. The default is 1,000.0.
          *
@@ -326,8 +316,8 @@ define([
         updateFrustums(near, far, this.farToNearRatio, numFrustums, this._frustumCommandsList);
 
         // give frameState, camera, and screen space camera controller initial state before rendering
-        updateFrameState(this, 0.0, JulianDate.now());
-        this.initializeFrame();
+        updateFrameState(this, frameState.mode, frameState.frameNumber, JulianDate.now());
+        this.initializeFrame(frameState.mode);
     };
 
     defineProperties(SceneView.prototype, {
@@ -341,22 +331,6 @@ define([
         camera : {
             get : function() {
                 return this._camera;
-            }
-        },
-
-        /**
-         * Gets state information about the current sceneView. If called outside of a primitive's <code>update</code>
-         * function, the previous frame's state is returned.
-         * @memberof SceneView.prototype
-         *
-         * @type {FrameState}
-         * @readonly
-         *
-         * @private
-         */
-        frameState : {
-            get: function() {
-                return this._frameState;
             }
         },
 
@@ -412,18 +386,6 @@ define([
         },
 
         /**
-         * Gets whether or not the scene is optimized for 3D only viewing.
-         * @memberof SceneView.prototype
-         * @type {Boolean}
-         * @readonly
-         */
-        scene3DOnly : {
-            get : function() {
-                return this._frameState.scene3DOnly;
-            }
-        },
-
-        /**
          * Gets the unique identifier for this sceneView.
          * @memberof SceneView.prototype
          * @type {String}
@@ -432,24 +394,6 @@ define([
         id : {
             get : function() {
                 return this._id;
-            }
-        },
-
-        /**
-         * Gets or sets the current mode of the sceneView.
-         * @memberof SceneView.prototype
-         * @type {SceneMode}
-         * @default {@link SceneMode.SCENE3D}
-         */
-        mode : {
-            get : function() {
-                return this._mode;
-            },
-            set : function(value) {
-                if (this.scene3DOnly && value !== SceneMode.SCENE3D) {
-                    throw new DeveloperError('Only SceneMode.SCENE3D is valid when scene3DOnly is true.');
-                }
-                this._mode = value;
             }
         },
 
@@ -489,13 +433,13 @@ define([
         passes.pick = false;
     }
 
-    function updateFrameState(sceneView, frameNumber, time) {
+    function updateFrameState(sceneView, mode, frameNumber, time) {
         // TODO: Update camera to view
         var camera = sceneView._camera;
         var frameState = sceneView._frameState;
 
-        frameState.mode = sceneView._mode;
-        frameState.morphTime = sceneView.morphTime;
+        frameState.mode = mode;
+        frameState.morphTime = sceneView._scene.morphTime;
         frameState.mapProjection = sceneView._scene.mapProjection;
         frameState.frameNumber = frameNumber;
         frameState.time = JulianDate.clone(time, frameState.time);
@@ -834,7 +778,6 @@ define([
         var i;
         var j;
 
-        var frameState = sceneView._frameState;
         var camera = sceneView._camera;
         var context = sceneView._context;
         var us = context.uniformState;
@@ -950,13 +893,12 @@ define([
     /**
      * @private
      */
-    SceneView.prototype.initializeFrame = function() {
-        this._camera.update(this._mode);
+    SceneView.prototype.initializeFrame = function(mode) {
+        this._camera.update(mode);
     };
 
-    function render(sceneView, time) {
-        var frameState = sceneView._frameState;
-        updateFrameState(sceneView, frameState.frameNumber, time);
+    function render(sceneView, frameState, time) {
+        updateFrameState(sceneView, frameState.mode, frameState.frameNumber, time);
         frameState.passes.render = true;
 
         var context = sceneView._context;
@@ -977,9 +919,9 @@ define([
     /**
      * @private
      */
-    SceneView.prototype.render = function(time) {
+    SceneView.prototype.render = function(frameState, time) {
         try {
-            render(this, time);
+            render(this, frameState, time);
         } catch (error) {
             this._renderError.raiseEvent(this, error);
 

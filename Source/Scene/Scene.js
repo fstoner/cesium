@@ -1540,7 +1540,7 @@ define([
 
             if (debugSceneView) {
                 var view = new SceneView(this, this._frameState);
-                view.render(time);
+                view.render(this._frameState, time);
             }
         } catch (error) {
             this._renderError.raiseEvent(this, error);
