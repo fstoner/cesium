@@ -161,21 +161,16 @@ define([
         }
         //>>includeEnd('debug');
 
-        var canvas = scene.canvas;
-        var context = scene._context;
-
         this._scene = scene;
         this._frameState = frameState;
-        this._canvas = canvas;
-        this._context = context;
 
         this._id = createGuid();
-
-        this._passState = new PassState(context);
 
         this._commandList = [];
         this._frustumCommandsList = [];
 
+        var context = scene._context;
+        this._passState = new PassState(context);
         this._globeDepth = new GlobeDepth(context);
 
         this._clearColorCommand = new ClearCommand({
@@ -186,19 +181,6 @@ define([
             depth : 1.0,
             owner : this
         });
-
-        this._renderError = new Event();
-
-        /**
-         * Exceptions occurring in <code>render</code> are always caught in order to raise the
-         * <code>renderError</code> event.  If this property is true, the error is rethrown
-         * after the event is raised.  If this property is false, the <code>render</code> function
-         * returns normally after raising the event.
-         *
-         * @type {Boolean}
-         * @default false
-         */
-        this.rethrowRenderErrors = false;
 
         /**
          * The background color.
@@ -316,8 +298,9 @@ define([
         updateFrustums(near, far, this.farToNearRatio, numFrustums, this._frustumCommandsList);
 
         // give frameState, camera, and screen space camera controller initial state before rendering
-        updateFrameState(this, frameState.mode, frameState.frameNumber, JulianDate.now());
-        this.initializeFrame(frameState.mode);
+        var mode = frameState.mode;
+        updateFrameState(this, mode, frameState.frameNumber, JulianDate.now());
+        this._camera.update(mode);
     };
 
     defineProperties(SceneView.prototype, {
@@ -331,33 +314,6 @@ define([
         camera : {
             get : function() {
                 return this._camera;
-            }
-        },
-
-        /**
-         * Gets the event that will be raised when an error is thrown inside the <code>render</code> function.
-         * The Scene instance and the thrown error are the only two parameters passed to the event handler.
-         * By default, errors are not rethrown after this event is raised, but that can be changed by setting
-         * the <code>rethrowRenderErrors</code> property.
-         * @memberof SceneView.prototype
-         *
-         * @type {Event}
-         * @readonly
-         */
-        renderError : {
-            get : function() {
-                return this._renderError;
-            }
-        },
-
-        /**
-         * @memberof SceneView.prototype
-         * @private
-         * @readonly
-         */
-        context : {
-            get : function() {
-                return this._context;
             }
         },
 
@@ -615,8 +571,7 @@ define([
         return attributeLocations;
     }
 
-    function createDebugFragmentShaderProgram(command, sceneView, shaderProgram) {
-        var context = sceneView._context;
+    function createDebugFragmentShaderProgram(command, sceneView, context, shaderProgram) {
         var sp = defaultValue(shaderProgram, command.shaderProgram);
         var fs = sp.fragmentShaderSource.clone();
 
@@ -655,11 +610,11 @@ define([
         return context.createShaderProgram(sp.vertexShaderSource, fs, attributeLocations);
     }
 
-    function executeDebugCommand(command, sceneView, passState, renderState, shaderProgram) {
+    function executeDebugCommand(command, sceneView, context, passState, renderState, shaderProgram) {
         if (defined(command.shaderProgram) || defined(shaderProgram)) {
             // Replace shader for frustum visualization
-            var sp = createDebugFragmentShaderProgram(command, sceneView, shaderProgram);
-            command.execute(sceneView._context, passState, renderState, sp);
+            var sp = createDebugFragmentShaderProgram(command, sceneView, context, shaderProgram);
+            command.execute(context, passState, renderState, sp);
             sp.destroy();
         }
     }
@@ -676,7 +631,7 @@ define([
         }
 
         if (sceneView.debugShowCommands || sceneView.debugShowFrustums) {
-            executeDebugCommand(command, sceneView, passState, renderState, shaderProgram);
+            executeDebugCommand(command, sceneView, context, passState, renderState, shaderProgram);
         } else {
             command.execute(context, passState, renderState, shaderProgram);
         }
@@ -774,12 +729,11 @@ define([
     var scratchPerspectiveOffCenterFrustum = new PerspectiveOffCenterFrustum();
     var scratchOrthographicFrustum = new OrthographicFrustum();
 
-    function executeCommands(sceneView, passState, clearColor, picking) {
+    function executeCommands(sceneView, context, passState, clearColor, picking) {
         var i;
         var j;
 
         var camera = sceneView._camera;
-        var context = sceneView._context;
         var us = context.uniformState;
 
         // Preserve the reference to the original framebuffer.
@@ -893,50 +847,21 @@ define([
     /**
      * @private
      */
-    SceneView.prototype.initializeFrame = function(mode) {
-        this._camera.update(mode);
-    };
-
-    function render(sceneView, frameState, time) {
-        updateFrameState(sceneView, frameState.mode, frameState.frameNumber, time);
+    SceneView.prototype.render = function(scene, context, frameState, time) {
+        updateFrameState(this, frameState.mode, frameState.frameNumber, time);
         frameState.passes.render = true;
 
-        var context = sceneView._context;
         var us = context.uniformState;
         us.update(context, frameState);
 
-        var scene = sceneView._scene;
-        var commandList = sceneView._commandList;
+        var commandList = this._commandList;
         commandList.length = 0;
         updatePrimitives(context, frameState, scene.globe, scene.primitives, commandList);
 
-        createPotentiallyVisibleSet(sceneView, frameState);
+        createPotentiallyVisibleSet(this, frameState);
 
-        var passState = sceneView._passState;
-        executeCommands(sceneView, passState, defaultValue(sceneView.backgroundColor, Color.BLACK));
-    }
-
-    /**
-     * @private
-     */
-    SceneView.prototype.render = function(frameState, time) {
-        try {
-            render(this, frameState, time);
-        } catch (error) {
-            this._renderError.raiseEvent(this, error);
-
-            if (this.rethrowRenderErrors) {
-                throw error;
-            }
-        }
-    };
-
-    /**
-     * @private
-     */
-    SceneView.prototype.clampLineWidth = function(width) {
-        var context = this._context;
-        return Math.max(context.minimumAliasedLineWidth, Math.min(width, context.maximumAliasedLineWidth));
+        var passState = this._passState;
+        executeCommands(this, context, passState, defaultValue(this.backgroundColor, Color.BLACK));
     };
 
     /**
