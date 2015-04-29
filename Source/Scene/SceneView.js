@@ -298,9 +298,8 @@ define([
         updateFrustums(near, far, this.farToNearRatio, numFrustums, this._frustumCommandsList);
 
         // give frameState, camera, and screen space camera controller initial state before rendering
-        var mode = frameState.mode;
-        updateFrameState(this, mode, frameState.frameNumber, JulianDate.now());
-        this._camera.update(mode);
+        updateFrameState(this, frameState);
+        this._camera.update(frameState.mode);
     };
 
     defineProperties(SceneView.prototype, {
@@ -389,21 +388,21 @@ define([
         passes.pick = false;
     }
 
-    function updateFrameState(sceneView, mode, frameNumber, time) {
+    function updateFrameState(sceneView, frameState) {
         // TODO: Update camera to view
         var camera = sceneView._camera;
-        var frameState = sceneView._frameState;
+        var fs = sceneView._frameState;
 
-        frameState.mode = mode;
-        frameState.morphTime = sceneView._scene.morphTime;
-        frameState.mapProjection = sceneView._scene.mapProjection;
-        frameState.frameNumber = frameNumber;
-        frameState.time = JulianDate.clone(time, frameState.time);
-        frameState.camera = camera;
-        frameState.cullingVolume = camera.frustum.computeCullingVolume(camera.positionWC, camera.directionWC, camera.upWC);
-        frameState.occluder = getOccluder(sceneView);
+        fs.mode = frameState.mode;
+        fs.morphTime = frameState.morphTime;
+        fs.mapProjection = frameState.mapProjection;
+        fs.frameNumber = frameState.frameNumber;
+        fs.time = JulianDate.clone(frameState.time, fs.time);
+        fs.camera = camera;
+        fs.cullingVolume = camera.frustum.computeCullingVolume(camera.positionWC, camera.directionWC, camera.upWC);
+        fs.occluder = getOccluder(sceneView);
 
-        clearPasses(frameState.passes);
+        clearPasses(fs.passes);
     }
 
     function updateFrustums(near, far, farToNearRatio, numFrustums, frustumCommandsList) {
@@ -847,8 +846,8 @@ define([
     /**
      * @private
      */
-    SceneView.prototype.render = function(scene, context, frameState, time) {
-        updateFrameState(this, frameState.mode, frameState.frameNumber, time);
+    SceneView.prototype.render = function(scene, context, frameState) {
+        updateFrameState(this, frameState);
         frameState.passes.render = true;
 
         var us = context.uniformState;
