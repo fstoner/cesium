@@ -363,14 +363,13 @@ define([
     var scratchOccluderBoundingSphere = new BoundingSphere();
     var scratchOccluder;
 
-    function getOccluder(sceneView) {
+    function getOccluder(mode, globe, position) {
         // TODO: The occluder is the top-level globe. When we add
         //       support for multiple central bodies, this should be the closest one.
-        var globe = sceneView._scene.globe;
-        if (sceneView._mode === SceneMode.SCENE3D && defined(globe)) {
+        if (mode === SceneMode.SCENE3D && defined(globe)) {
             var ellipsoid = globe.ellipsoid;
             scratchOccluderBoundingSphere.radius = ellipsoid.minimumRadius;
-            scratchOccluder = Occluder.fromBoundingSphere(scratchOccluderBoundingSphere, sceneView._camera.positionWC, scratchOccluder);
+            scratchOccluder = Occluder.fromBoundingSphere(scratchOccluderBoundingSphere, position, scratchOccluder);
             return scratchOccluder;
         }
 
@@ -382,15 +381,29 @@ define([
         passes.pick = false;
     }
 
-    function updateFrameState(sceneView, frameState) {
+    var originalCamera;
+    var originalCullingVolume;
+    var originalOccluder;
+
+    function setFrameState(sceneView, frameState) {
         // TODO: Update camera to view
-        var originalCamera = frameState.camera;
-        var originalCullingVolume = frameState.cullingVolume;
+        originalCamera = frameState.camera;
+        originalCullingVolume = frameState.cullingVolume;
+        originalOccluder = frameState.occluder;
 
         var camera = sceneView._camera;
 
         frameState.camera = camera;
         frameState.cullingVolume = camera.frustum.computeCullingVolume(camera.positionWC, camera.directionWC, camera.upWC);
+        frameState.occluder = getOccluder(sceneView._mode, sceneView._scene.globe, sceneView._camera.positionWC);
+
+        clearPasses(frameState.passes);
+    }
+
+    function resetFrameState(sceneView, frameState) {
+        frameState.camera = originalCamera;
+        frameState.cullingVolume = originalCullingVolume;
+        frameState.occluder = originalOccluder;
 
         clearPasses(frameState.passes);
     }
@@ -836,7 +849,7 @@ define([
      * @private
      */
     SceneView.prototype.render = function(scene, context, frameState, passState) {
-        updateFrameState(this, frameState);
+        setFrameState(this, frameState);
         frameState.passes.render = true;
 
         var us = context.uniformState;
@@ -849,6 +862,7 @@ define([
         createPotentiallyVisibleSet(this, frameState);
 
         executeCommands(this, context, frameState, passState, defaultValue(this.backgroundColor, Color.BLACK));
+        resetFrameState(this, frameState);
     };
 
     /**
