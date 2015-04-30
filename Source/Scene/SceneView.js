@@ -735,7 +735,6 @@ define([
         var j;
 
         var camera = sceneView._camera;
-        var us = context.uniformState;
 
         // Preserve the reference to the original framebuffer.
         var originalFramebuffer = passState.framebuffer;
@@ -774,10 +773,8 @@ define([
             passState.framebuffer = sceneView._globeDepth.framebuffer;
         }
 
-        // Update the uniforms based on the original frustum.
-        us.updateFrustum(frustum);
-
         // Execute commands in each frustum in back to front order
+        var us = context.uniformState;
         var depthClearCommand = sceneView._depthClearCommand;
         for (i = 0; i < numFrustums; ++i) {
             var index = numFrustums - i - 1;
