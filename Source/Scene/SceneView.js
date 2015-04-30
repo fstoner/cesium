@@ -614,7 +614,7 @@ define([
                                         0.0, 0.0, 0.0, 1.0);
     transformFrom2D = Matrix4.inverseTransformation(transformFrom2D, transformFrom2D);
 
-    function executeCommand(command, sceneView, context, passState, renderState, shaderProgram, debugFramebuffer) {
+    function executeCommand(command, sceneView, context, frameState, passState, renderState, shaderProgram, debugFramebuffer) {
         if ((defined(sceneView.debugCommandFilter)) && !sceneView.debugCommandFilter(command)) {
             return;
         }
@@ -632,7 +632,6 @@ define([
                 sceneView._debugSphere.destroy();
             }
 
-            var frameState = sceneView._scene._frameState;
             var boundingVolume = command.boundingVolume;
             var radius = boundingVolume.radius;
             var center = boundingVolume.center;
@@ -718,7 +717,7 @@ define([
     var scratchPerspectiveOffCenterFrustum = new PerspectiveOffCenterFrustum();
     var scratchOrthographicFrustum = new OrthographicFrustum();
 
-    function executeCommands(sceneView, context, passState, clearColor, picking) {
+    function executeCommands(sceneView, context, frameState, passState, clearColor, picking) {
         var i;
         var j;
 
@@ -792,7 +791,7 @@ define([
             var commands = frustumCommands.commands[Pass.GLOBE];
             var length = frustumCommands.indices[Pass.GLOBE];
             for (j = 0; j < length; ++j) {
-                executeCommand(commands[j], sceneView, context, passState);
+                executeCommand(commands[j], sceneView, context, frameState, passState);
             }
 
             globeDepth.update(context);
@@ -809,7 +808,7 @@ define([
                 commands = frustumCommands.commands[pass];
                 length = frustumCommands.indices[pass];
                 for (j = 0; j < length; ++j) {
-                    executeCommand(commands[j], sceneView, context, passState);
+                    executeCommand(commands[j], sceneView, context, frameState, passState);
                 }
             }
 
@@ -849,7 +848,7 @@ define([
 
         createPotentiallyVisibleSet(this, frameState);
 
-        executeCommands(this, context, passState, defaultValue(this.backgroundColor, Color.BLACK));
+        executeCommands(this, context, frameState, passState, defaultValue(this.backgroundColor, Color.BLACK));
     };
 
     /**

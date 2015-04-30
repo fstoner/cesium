@@ -420,7 +420,7 @@ define([
         return getTranslucentShaderProgram(context, shaderProgram, oit._alphaShaderCache, alphaShaderSource);
     }
 
-    function executeTranslucentCommandsSortedMultipass(oit, scene, executeFunction, passState, commands) {
+    function executeTranslucentCommandsSortedMultipass(oit, scene, executeFunction, frameState, passState, commands) {
         var command;
         var renderState;
         var shaderProgram;
@@ -453,7 +453,7 @@ define([
 
             renderState = command.oit.colorRenderState;
             shaderProgram = command.oit.colorShaderProgram;
-            executeFunction(command, scene, context, passState, renderState, shaderProgram, debugFramebuffer);
+            executeFunction(command, scene, context, frameState, passState, renderState, shaderProgram, debugFramebuffer);
         }
 
         passState.framebuffer = oit._alphaFBO;
@@ -462,13 +462,13 @@ define([
             command = commands[j];
             renderState = command.oit.alphaRenderState;
             shaderProgram = command.oit.alphaShaderProgram;
-            executeFunction(command, scene, context, passState, renderState, shaderProgram, debugFramebuffer);
+            executeFunction(command, scene, context, frameState, passState, renderState, shaderProgram, debugFramebuffer);
         }
 
         passState.framebuffer = framebuffer;
     }
 
-    function executeTranslucentCommandsSortedMRT(oit, scene, executeFunction, passState, commands) {
+    function executeTranslucentCommandsSortedMRT(oit, scene, executeFunction, frameState, passState, commands) {
         var context = scene.context;
         var framebuffer = passState.framebuffer;
         var length = commands.length;
@@ -492,19 +492,19 @@ define([
 
             var renderState = command.oit.translucentRenderState;
             var shaderProgram = command.oit.translucentShaderProgram;
-            executeFunction(command, scene, context, passState, renderState, shaderProgram, debugFramebuffer);
+            executeFunction(command, scene, context, frameState, passState, renderState, shaderProgram, debugFramebuffer);
         }
 
         passState.framebuffer = framebuffer;
     }
 
-    OIT.prototype.executeCommands = function(scene, executeFunction, passState, commands) {
+    OIT.prototype.executeCommands = function(scene, executeFunction, frameState, passState, commands) {
         if (this._translucentMRTSupport) {
-            executeTranslucentCommandsSortedMRT(this, scene, executeFunction, passState, commands);
+            executeTranslucentCommandsSortedMRT(this, scene, executeFunction, frameState, passState, commands);
             return;
         }
 
-        executeTranslucentCommandsSortedMultipass(this, scene, executeFunction, passState, commands);
+        executeTranslucentCommandsSortedMultipass(this, scene, executeFunction, frameState, passState, commands);
     };
 
     OIT.prototype.execute = function(context, passState) {

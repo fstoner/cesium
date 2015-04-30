@@ -1097,7 +1097,7 @@ define([
                                         0.0, 0.0, 0.0, 1.0);
     transformFrom2D = Matrix4.inverseTransformation(transformFrom2D, transformFrom2D);
 
-    function executeCommand(command, scene, context, passState, renderState, shaderProgram, debugFramebuffer) {
+    function executeCommand(command, scene, context, frameState, passState, renderState, shaderProgram, debugFramebuffer) {
         if ((defined(scene.debugCommandFilter)) && !scene.debugCommandFilter(command)) {
             return;
         }
@@ -1115,7 +1115,6 @@ define([
                 scene._debugSphere.destroy();
             }
 
-            var frameState = scene._frameState;
             var boundingVolume = command.boundingVolume;
             var radius = boundingVolume.radius;
             var center = boundingVolume.center;
@@ -1192,14 +1191,14 @@ define([
         return BoundingSphere.distanceSquaredTo(b.boundingVolume, position) - BoundingSphere.distanceSquaredTo(a.boundingVolume, position);
     }
 
-    function executeTranslucentCommandsSorted(scene, executeFunction, passState, commands) {
+    function executeTranslucentCommandsSorted(scene, executeFunction, frameState, passState, commands) {
         var context = scene.context;
 
         mergeSort(commands, translucentCompare, scene._camera.positionWC);
 
         var length = commands.length;
         for (var j = 0; j < length; ++j) {
-            executeFunction(commands[j], scene, context, passState);
+            executeFunction(commands[j], scene, context, frameState, passState);
         }
     }
 
@@ -1216,11 +1215,10 @@ define([
     var scratchPerspectiveOffCenterFrustum = new PerspectiveOffCenterFrustum();
     var scratchOrthographicFrustum = new OrthographicFrustum();
 
-    function executeCommands(scene, passState, clearColor, picking) {
+    function executeCommands(scene, frameState, passState, clearColor, picking) {
         var i;
         var j;
 
-        var frameState = scene._frameState;
         var camera = scene._camera;
         var context = scene.context;
         var us = context.uniformState;
@@ -1308,11 +1306,11 @@ define([
         // Ideally, we would render the sky box and atmosphere last for early-z,
         // but we would have to draw it in each frustum
         if (defined(skyBoxCommand)) {
-            executeCommand(skyBoxCommand, scene, context, passState);
+            executeCommand(skyBoxCommand, scene, context, frameState, passState);
         }
 
         if (defined(skyAtmosphereCommand)) {
-            executeCommand(skyAtmosphereCommand, scene, context, passState);
+            executeCommand(skyAtmosphereCommand, scene, context, frameState, passState);
         }
 
         if (defined(sunCommand) && sunVisible) {
@@ -1335,8 +1333,8 @@ define([
         var executeTranslucentCommands;
         if (useOIT) {
             if (!defined(scene._executeOITFunction)) {
-                scene._executeOITFunction = function(scene, executeFunction, passState, commands) {
-                    scene._oit.executeCommands(scene, executeFunction, passState, commands);
+                scene._executeOITFunction = function(scene, executeFunction, frameState, passState, commands) {
+                    scene._oit.executeCommands(scene, executeFunction, frameState, passState, commands);
                 };
             }
             executeTranslucentCommands = scene._executeOITFunction;
@@ -1371,7 +1369,7 @@ define([
             var commands = frustumCommands.commands[Pass.GLOBE];
             var length = frustumCommands.indices[Pass.GLOBE];
             for (j = 0; j < length; ++j) {
-                executeCommand(commands[j], scene, context, passState);
+                executeCommand(commands[j], scene, context, frameState, passState);
             }
 
             globeDepth.update(context);
@@ -1389,7 +1387,7 @@ define([
                 commands = frustumCommands.commands[pass];
                 length = frustumCommands.indices[pass];
                 for (j = 0; j < length; ++j) {
-                    executeCommand(commands[j], scene, context, passState);
+                    executeCommand(commands[j], scene, context, frameState, passState);
                 }
             }
 
@@ -1398,7 +1396,7 @@ define([
 
             commands = frustumCommands.commands[Pass.TRANSLUCENT];
             commands.length = frustumCommands.indices[Pass.TRANSLUCENT];
-            executeTranslucentCommands(scene, executeCommand, passState, commands);
+            executeTranslucentCommands(scene, executeCommand, frameState, passState, commands);
         }
 
         if (scene.debugShowGlobeDepth) {
@@ -1498,7 +1496,7 @@ define([
 
         var passState = scene._passState;
 
-        executeCommands(scene, passState, defaultValue(scene.backgroundColor, Color.BLACK));
+        executeCommands(scene, frameState, passState, defaultValue(scene.backgroundColor, Color.BLACK));
         executeOverlayCommands(scene, passState);
 
         frameState.creditDisplay.endFrame();
@@ -1700,7 +1698,7 @@ define([
         scratchRectangle.x = drawingBufferPosition.x - ((rectangleWidth - 1.0) * 0.5);
         scratchRectangle.y = (this.drawingBufferHeight - drawingBufferPosition.y) - ((rectangleHeight - 1.0) * 0.5);
 
-        executeCommands(this, this._pickFramebuffer.begin(scratchRectangle), scratchColorZero, true);
+        executeCommands(this, frameState, this._pickFramebuffer.begin(scratchRectangle), scratchColorZero, true);
         var object = this._pickFramebuffer.end(scratchRectangle);
         context.endFrame();
         callAfterRenderFunctions(frameState);
