@@ -162,7 +162,6 @@ define([
         //>>includeEnd('debug');
 
         this._scene = scene;
-        this._frameState = frameState;
 
         this._id = createGuid();
 
@@ -170,7 +169,6 @@ define([
         this._frustumCommandsList = [];
 
         var context = scene._context;
-        this._passState = new PassState(context);
         this._globeDepth = new GlobeDepth(context);
 
         this._clearColorCommand = new ClearCommand({
@@ -296,10 +294,6 @@ define([
         var far = camera.frustum.far;
         var numFrustums = Math.ceil(Math.log(far / near) / Math.log(this.farToNearRatio));
         updateFrustums(near, far, this.farToNearRatio, numFrustums, this._frustumCommandsList);
-
-        // give frameState, camera, and screen space camera controller initial state before rendering
-        updateFrameState(this, frameState);
-        this._camera.update(frameState.mode);
     };
 
     defineProperties(SceneView.prototype, {
@@ -390,19 +384,15 @@ define([
 
     function updateFrameState(sceneView, frameState) {
         // TODO: Update camera to view
+        var originalCamera = frameState.camera;
+        var originalCullingVolume = frameState.cullingVolume;
+
         var camera = sceneView._camera;
-        var fs = sceneView._frameState;
 
-        fs.mode = frameState.mode;
-        fs.morphTime = frameState.morphTime;
-        fs.mapProjection = frameState.mapProjection;
-        fs.frameNumber = frameState.frameNumber;
-        fs.time = JulianDate.clone(frameState.time, fs.time);
-        fs.camera = camera;
-        fs.cullingVolume = camera.frustum.computeCullingVolume(camera.positionWC, camera.directionWC, camera.upWC);
-        fs.occluder = getOccluder(sceneView);
+        frameState.camera = camera;
+        frameState.cullingVolume = camera.frustum.computeCullingVolume(camera.positionWC, camera.directionWC, camera.upWC);
 
-        clearPasses(fs.passes);
+        clearPasses(frameState.passes);
     }
 
     function updateFrustums(near, far, farToNearRatio, numFrustums, frustumCommandsList) {
@@ -642,7 +632,7 @@ define([
                 sceneView._debugSphere.destroy();
             }
 
-            var frameState = sceneView._frameState;
+            var frameState = sceneView._scene._frameState;
             var boundingVolume = command.boundingVolume;
             var radius = boundingVolume.radius;
             var center = boundingVolume.center;
@@ -846,7 +836,7 @@ define([
     /**
      * @private
      */
-    SceneView.prototype.render = function(scene, context, frameState) {
+    SceneView.prototype.render = function(scene, context, frameState, passState) {
         updateFrameState(this, frameState);
         frameState.passes.render = true;
 
@@ -859,7 +849,6 @@ define([
 
         createPotentiallyVisibleSet(this, frameState);
 
-        var passState = this._passState;
         executeCommands(this, context, passState, defaultValue(this.backgroundColor, Color.BLACK));
     };
 
