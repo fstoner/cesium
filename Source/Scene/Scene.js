@@ -1477,6 +1477,8 @@ define([
 
     var debugSceneView = true;
 
+    var showSceneView = false;
+
     function render(scene, time) {
         if (!defined(time)) {
             time = JulianDate.now();
@@ -1498,21 +1500,23 @@ define([
             view.execute(c, scene._passState);
         }
 
-        var context = scene.context; /*
-        var us = scene.context.uniformState;
-        us.update(context, frameState);
+        var context = scene.context;
+        if (!showSceneView) {
+            var us = scene.context.uniformState;
+            us.update(context, frameState);
 
-        scene._commandList.length = 0;
-        scene._overlayCommandList.length = 0;
+            scene._commandList.length = 0;
+            scene._overlayCommandList.length = 0;
 
-        updatePrimitives(scene);
-        createPotentiallyVisibleSet(scene);
+            updatePrimitives(scene);
+            createPotentiallyVisibleSet(scene);
 
-        var passState = scene._passState;
+            var passState = scene._passState;
 
-        executeCommands(scene, frameState, passState, defaultValue(scene.backgroundColor, Color.BLACK));
-        executeOverlayCommands(scene, passState);
-*/
+            executeCommands(scene, frameState, passState, defaultValue(scene.backgroundColor, Color.BLACK));
+            executeOverlayCommands(scene, passState);
+        }
+
         frameState.creditDisplay.endFrame();
 
         if (scene.debugShowFramesPerSecond) {
