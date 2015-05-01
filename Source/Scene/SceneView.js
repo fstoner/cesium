@@ -392,20 +392,20 @@ define([
         originalOccluder = frameState.occluder;
 
         var camera = sceneView._camera;
+        var target = new Cartesian3(300770.50872389384, 5634912.131394585, 2978152.2865545116);
+        var offset = new Cartesian3(6344.974098678562, -793.3419798081741, 2499.9508860763162);
+        camera.lookAt(target, offset);
+        camera.lookAtTransform(Matrix4.IDENTITY);
 
         frameState.camera = camera;
         frameState.cullingVolume = camera.frustum.computeCullingVolume(camera.positionWC, camera.directionWC, camera.upWC);
-        frameState.occluder = getOccluder(sceneView._mode, sceneView._scene.globe, sceneView._camera.positionWC);
-
-        clearPasses(frameState.passes);
+        frameState.occluder = getOccluder(sceneView._scene.mode, sceneView._scene.globe, sceneView._camera.positionWC);
     }
 
     function resetFrameState(sceneView, frameState) {
         frameState.camera = originalCamera;
         frameState.cullingVolume = originalCullingVolume;
         frameState.occluder = originalOccluder;
-
-        clearPasses(frameState.passes);
     }
 
     function updateFrustums(near, far, farToNearRatio, numFrustums, frustumCommandsList) {
@@ -738,6 +738,7 @@ define([
 
         // Preserve the reference to the original framebuffer.
         var originalFramebuffer = passState.framebuffer;
+        passState.framebuffer = sceneView._globeDepth.framebuffer;
 
         // Create a working frustum from the original camera frustum.
         var frustum;
@@ -758,22 +759,13 @@ define([
         sceneView._globeDepth.update(context);
         sceneView._globeDepth.clear(context, passState, clearColor);
 
-        // Determine if there are any translucent surfaces in any of the frustums.
-        var renderTranslucentCommands = false;
-        var frustumCommandsList = sceneView._frustumCommandsList;
-        var numFrustums = frustumCommandsList.length;
-        for (i = 0; i < numFrustums; ++i) {
-            if (frustumCommandsList[i].indices[Pass.TRANSLUCENT] > 0) {
-                renderTranslucentCommands = true;
-                break;
-            }
-        }
-
         if (sceneView._globeDepth.supported) {
             passState.framebuffer = sceneView._globeDepth.framebuffer;
         }
 
         // Execute commands in each frustum in back to front order
+        var frustumCommandsList = sceneView._frustumCommandsList;
+        var numFrustums = frustumCommandsList.length;
         var us = context.uniformState;
         var depthClearCommand = sceneView._depthClearCommand;
         for (i = 0; i < numFrustums; ++i) {
@@ -826,13 +818,8 @@ define([
             us.updateFrustum(frustum);
         }
 
-        if (sceneView.debugShowGlobeDepth) {
-            var gd = getDebugGlobeDepth(sceneView, context, sceneView.debugShowGlobeDepthFrustum - 1);
-            gd.executeDebugGlobeDepth(context, passState);
-        }
-
         passState.framebuffer = originalFramebuffer;
-        sceneView._globeDepth.executeCopyColor(context, passState);
+//        sceneView._globeDepth.executeCopyColor(context, passState);
     }
 
     function updatePrimitives(context, frameState, globe, primitives, commandList) {
@@ -847,7 +834,6 @@ define([
      */
     SceneView.prototype.render = function(scene, context, frameState, passState) {
         setFrameState(this, frameState);
-        frameState.passes.render = true;
 
         var us = context.uniformState;
         us.update(context, frameState);
@@ -859,7 +845,16 @@ define([
         createPotentiallyVisibleSet(this, frameState);
 
         executeCommands(this, context, frameState, passState, defaultValue(this.backgroundColor, Color.BLACK));
+
         resetFrameState(this, frameState);
+    };
+
+    /**
+     * @private
+     */
+    SceneView.prototype.execute = function(context, passState) {
+        var gd = getDebugGlobeDepth(this, context, this.debugShowGlobeDepthFrustum - 1);
+        gd.executeDebugGlobeDepth(context, passState);
     };
 
     /**

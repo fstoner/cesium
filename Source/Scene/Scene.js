@@ -1470,6 +1470,8 @@ define([
         this._screenSpaceCameraController.update();
     };
 
+    var debugSceneView = true;
+
     function render(scene, time) {
         if (!defined(time)) {
             time = JulianDate.now();
@@ -1477,15 +1479,22 @@ define([
 
         scene._preRender.raiseEvent(scene, time);
 
-        var us = scene.context.uniformState;
         var frameState = scene._frameState;
-
         var frameNumber = CesiumMath.incrementWrap(frameState.frameNumber, 15000000.0, 1.0);
         updateFrameState(scene, frameNumber, time);
         frameState.passes.render = true;
         frameState.creditDisplay.beginFrame();
 
+        if (debugSceneView) {
+            var view = new SceneView(scene, frameState);
+            view.debugShowGlobeDepth = true;
+            var c = scene.context;
+            view.render(scene, c, frameState, scene._passState);
+            //view.execute(c, frameState, scene._passState);
+        }
+
         var context = scene.context;
+        var us = scene.context.uniformState;
         us.update(context, frameState);
 
         scene._commandList.length = 0;
@@ -1527,19 +1536,12 @@ define([
         scene._postRender.raiseEvent(scene, time);
     }
 
-    var debugSceneView = false;
-
     /**
      * @private
      */
     Scene.prototype.render = function(time) {
         try {
             render(this, time);
-
-            if (debugSceneView) {
-                var view = new SceneView(this, this._frameState);
-                view.render(this, this._context, this._frameState, this._passState);
-            }
         } catch (error) {
             this._renderError.raiseEvent(this, error);
 
