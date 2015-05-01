@@ -1487,10 +1487,9 @@ define([
 
         if (debugSceneView) {
             var view = new SceneView(scene, frameState);
-            view.debugShowGlobeDepth = true;
+            view.debugShowGlobeDepth = false;
             var c = scene.context;
             view.render(scene, c, frameState, scene._passState);
-            //view.execute(c, frameState, scene._passState);
         }
 
         var context = scene.context;

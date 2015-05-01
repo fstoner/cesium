@@ -819,7 +819,7 @@ define([
         }
 
         passState.framebuffer = originalFramebuffer;
-//        sceneView._globeDepth.executeCopyColor(context, passState);
+        sceneView._globeDepth.executeCopyColor(context, passState);
     }
 
     function updatePrimitives(context, frameState, globe, primitives, commandList) {
@@ -847,14 +847,6 @@ define([
         executeCommands(this, context, frameState, passState, defaultValue(this.backgroundColor, Color.BLACK));
 
         resetFrameState(this, frameState);
-    };
-
-    /**
-     * @private
-     */
-    SceneView.prototype.execute = function(context, passState) {
-        var gd = getDebugGlobeDepth(this, context, this.debugShowGlobeDepthFrustum - 1);
-        gd.executeDebugGlobeDepth(context, passState);
     };
 
     /**
