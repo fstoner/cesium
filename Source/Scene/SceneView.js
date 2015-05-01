@@ -282,7 +282,7 @@ define([
          *
          * @default 1
          */
-        this.debugShowGlobeDepthFrustum = 1;
+        this.debugShowGlobeDepthFrustum = 2;
 
         this._debugSphere = undefined;
 
@@ -850,6 +850,14 @@ define([
         executeCommands(this, context, frameState, passState, defaultValue(this.backgroundColor, Color.BLACK));
 
         resetFrameState(this, frameState);
+    };
+
+    /**
+     * @private
+     */
+    SceneView.prototype.execute = function(context, passState) {
+        var gd = getDebugGlobeDepth(this, context, this.debugShowGlobeDepthFrustum - 1);
+        gd.executeDebugGlobeDepth(context, passState);
     };
 
     /**

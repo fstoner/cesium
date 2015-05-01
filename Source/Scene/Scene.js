@@ -1492,12 +1492,13 @@ define([
 
         if (debugSceneView) {
             var view = new SceneView(scene, frameState);
-            view.debugShowGlobeDepth = false;
+            view.debugShowGlobeDepth = true;
             var c = scene.context;
             view.render(scene, c, frameState, scene._passState);
+            view.execute(c, scene._passState);
         }
 
-        var context = scene.context;
+        var context = scene.context; /*
         var us = scene.context.uniformState;
         us.update(context, frameState);
 
@@ -1511,7 +1512,7 @@ define([
 
         executeCommands(scene, frameState, passState, defaultValue(scene.backgroundColor, Color.BLACK));
         executeOverlayCommands(scene, passState);
-
+*/
         frameState.creditDisplay.endFrame();
 
         if (scene.debugShowFramesPerSecond) {
