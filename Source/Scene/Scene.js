@@ -1215,6 +1215,18 @@ define([
     var scratchPerspectiveOffCenterFrustum = new PerspectiveOffCenterFrustum();
     var scratchOrthographicFrustum = new OrthographicFrustum();
 
+    function getScratchFrustum(camera) {
+        var frustum;
+        if (defined(camera.frustum.fov)) {
+            frustum = camera.frustum.clone(scratchPerspectiveFrustum);
+        } else if (defined(camera.frustum.infiniteProjectionMatrix)){
+            frustum = camera.frustum.clone(scratchPerspectiveOffCenterFrustum);
+        } else {
+            frustum = camera.frustum.clone(scratchOrthographicFrustum);
+        }
+        return frustum;
+    }
+
     function executeCommands(scene, frameState, passState, clearColor, picking) {
         var i;
         var j;
@@ -1246,14 +1258,7 @@ define([
         var originalFramebuffer = passState.framebuffer;
 
         // Create a working frustum from the original camera frustum.
-        var frustum;
-        if (defined(camera.frustum.fov)) {
-            frustum = camera.frustum.clone(scratchPerspectiveFrustum);
-        } else if (defined(camera.frustum.infiniteProjectionMatrix)){
-            frustum = camera.frustum.clone(scratchPerspectiveOffCenterFrustum);
-        } else {
-            frustum = camera.frustum.clone(scratchOrthographicFrustum);
-        }
+        var frustum = getScratchFrustum(scene._camera);
 
         // Clear the pass state framebuffer.
         var clearColorCommand = scene._clearColorCommand;

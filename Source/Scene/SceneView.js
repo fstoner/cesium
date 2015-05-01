@@ -730,17 +730,7 @@ define([
     var scratchPerspectiveOffCenterFrustum = new PerspectiveOffCenterFrustum();
     var scratchOrthographicFrustum = new OrthographicFrustum();
 
-    function executeCommands(sceneView, context, frameState, passState, clearColor, picking) {
-        var i;
-        var j;
-
-        var camera = sceneView._camera;
-
-        // Preserve the reference to the original framebuffer.
-        var originalFramebuffer = passState.framebuffer;
-        passState.framebuffer = sceneView._globeDepth.framebuffer;
-
-        // Create a working frustum from the original camera frustum.
+    function getScratchFrustum(camera) {
         var frustum;
         if (defined(camera.frustum.fov)) {
             frustum = camera.frustum.clone(scratchPerspectiveFrustum);
@@ -749,6 +739,12 @@ define([
         } else {
             frustum = camera.frustum.clone(scratchOrthographicFrustum);
         }
+        return frustum;
+    }
+
+    function executeCommands(sceneView, context, frameState, passState, clearColor, picking) {
+        var i;
+        var j;
 
         // Clear the pass state framebuffer.
         var clearColorCommand = sceneView._clearColorCommand;
@@ -759,9 +755,15 @@ define([
         sceneView._globeDepth.update(context);
         sceneView._globeDepth.clear(context, passState, clearColor);
 
+        // Preserve the reference to the original framebuffer.
+        var originalFramebuffer = passState.framebuffer;
+
         if (sceneView._globeDepth.supported) {
             passState.framebuffer = sceneView._globeDepth.framebuffer;
         }
+
+        // Create a working frustum from the original camera frustum.
+        var frustum = getScratchFrustum(sceneView._camera);
 
         // Execute commands in each frustum in back to front order
         var frustumCommandsList = sceneView._frustumCommandsList;
@@ -818,6 +820,7 @@ define([
             us.updateFrustum(frustum);
         }
 
+        // Restore the original framebuffer.
         passState.framebuffer = originalFramebuffer;
         sceneView._globeDepth.executeCopyColor(context, passState);
     }
