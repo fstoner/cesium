@@ -354,7 +354,7 @@ define([
          * @type {Number}
          * @default 1000.0
          */
-        this.farToNearRatio = 1000000000.0;
+        this.farToNearRatio = 1000.0;
 
         /**
          * This property is for debugging only; it is not for production use.
