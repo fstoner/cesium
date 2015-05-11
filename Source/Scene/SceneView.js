@@ -307,7 +307,7 @@ define([
             },
             u_shadowDepthTexture : function() {
                 var gd = that.debugShowGlobeDepth ? getDebugGlobeDepth(that, context, that.debugShowGlobeDepthFrustum - 1) : that._globeDepth;
-                return gd;
+                return gd._globeDepthTexture;
             }
         };
 
@@ -836,11 +836,8 @@ define([
 
             var globeDepth = sceneView.debugShowGlobeDepth ? getDebugGlobeDepth(sceneView, context, index) : sceneView._globeDepth;
 
-            var fb;
-            if (sceneView.debugShowGlobeDepth) {
-                fb = passState.framebuffer;
-                passState.framebuffer = globeDepth.framebuffer;
-            }
+            var fb = passState.framebuffer;
+            passState.framebuffer = globeDepth.framebuffer;
 
             us.updateFrustum(frustum);
             depthClearCommand.execute(context, passState);
@@ -854,9 +851,8 @@ define([
             globeDepth.update(context);
             globeDepth.executeCopyDepth(context, passState);
 
-            if (sceneView.debugShowGlobeDepth) {
-                passState.framebuffer = fb;
-            }
+            // TODO: Move this lower to process other shadow casters.
+            passState.framebuffer = fb;
 
             // Execute commands in order by pass up to the translucent pass.
             var startPass = Pass.GLOBE + 1;
