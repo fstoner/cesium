@@ -89,7 +89,13 @@ define([
              * @type {Boolean}
              * @default false
              */
-            pick : false
+            pick : false,
+            /**
+             * <code>true</code> if the primitive should update for a picking pass, <code>false</code> otherwise.
+             * @type {Boolean}
+             * @default false
+             */
+            shadow : false
         };
 
         /**

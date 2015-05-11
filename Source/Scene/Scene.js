@@ -6,6 +6,7 @@ define([
         '../Core/Cartesian3',
         '../Core/Color',
         '../Core/ColorGeometryInstanceAttribute',
+        '../Core/combine',
         '../Core/createGuid',
         '../Core/defaultValue',
         '../Core/defined',
@@ -58,6 +59,7 @@ define([
         Cartesian3,
         Color,
         ColorGeometryInstanceAttribute,
+        combine,
         createGuid,
         defaultValue,
         defined,
@@ -352,7 +354,7 @@ define([
          * @type {Number}
          * @default 1000.0
          */
-        this.farToNearRatio = 1000.0;
+        this.farToNearRatio = 1000000000.0;
 
         /**
          * This property is for debugging only; it is not for production use.
@@ -479,6 +481,8 @@ define([
         // give frameState, camera, and screen space camera controller initial state before rendering
         updateFrameState(this, 0.0, JulianDate.now());
         this.initializeFrame();
+
+        this._shadowSources = [];
     };
 
     defineProperties(Scene.prototype, {
@@ -855,6 +859,7 @@ define([
     function clearPasses(passes) {
         passes.render = false;
         passes.pick = false;
+        passes.shadow = false;
     }
 
     function updateFrameState(scene, frameNumber, time) {
@@ -1374,6 +1379,8 @@ define([
             var commands = frustumCommands.commands[Pass.GLOBE];
             var length = frustumCommands.indices[Pass.GLOBE];
             for (j = 0; j < length; ++j) {
+                var command = commands[j];
+                command.uniformMap = combine(command.uniformMap, scene._shadowSources[0]._uniforms);
                 executeCommand(commands[j], scene, context, frameState, passState);
             }
 
@@ -1477,7 +1484,7 @@ define([
 
     var debugSceneView = true;
 
-    var showSceneView = false;
+    var showSceneView = true;
 
     function render(scene, time) {
         if (!defined(time)) {
@@ -1493,11 +1500,16 @@ define([
         frameState.creditDisplay.beginFrame();
 
         if (debugSceneView) {
-            var view = new SceneView(scene, frameState);
-            view.debugShowGlobeDepth = true;
+            if (scene._shadowSources.length === 0) {
+                var source = new SceneView(scene, frameState);
+                scene._shadowSources[scene._shadowSources.length] = source;
+                source.debugShowGlobeDepth = true;
+            }
             var c = scene.context;
-            view.render(scene, c, frameState, scene._passState);
-            view.execute(c, scene._passState);
+            frameState.passes.shadow = true;
+            scene._shadowSources[scene._shadowSources.length - 1].render(scene, c, frameState, scene._passState);
+            frameState.passes.shadow = false;
+            scene._shadowSources[scene._shadowSources.length - 1].execute(c, scene._passState);
         }
 
         var context = scene.context;

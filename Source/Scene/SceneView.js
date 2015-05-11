@@ -194,7 +194,7 @@ define([
          * @type {Number}
          * @default 1000.0
          */
-        this.farToNearRatio = 1000.0;
+        this.farToNearRatio = 1000000000.0;
 
         /**
          * This property is for debugging only; it is not for production use.
@@ -282,7 +282,7 @@ define([
          *
          * @default 1
          */
-        this.debugShowGlobeDepthFrustum = 2;
+        this.debugShowGlobeDepthFrustum = 1;
 
         this._debugSphere = undefined;
 
@@ -294,7 +294,44 @@ define([
         var far = camera.frustum.far;
         var numFrustums = Math.ceil(Math.log(far / near) / Math.log(this.farToNearRatio));
         updateFrustums(near, far, this.farToNearRatio, numFrustums, this._frustumCommandsList);
+
+        var that = this;
+        this._uniforms = {
+            u_shadowSourceViewProjection : function() {
+                cleanViewProjection(that);
+                return that._viewProjection;
+            },
+            u_shadowSourceInverseViewProjection : function() {
+                cleanInverseViewProjection(that);
+                return that._inverseViewProjection;
+            },
+            u_shadowDepthTexture : function() {
+                return that._debugGlobeDepths[that.debugShowGlobeDepthFrustum - 1];
+            }
+        };
+
+        this._viewProjection = Matrix4.clone(Matrix4.IDENTITY);
+        this._viewProjectionDirty = true;
+
+        this._inverseViewProjection = Matrix4.clone(Matrix4.IDENTITY);
+        this._inverseViewProjectionDirty = true;
     };
+
+    function cleanViewProjection(sceneView) {
+        if (sceneView._viewProjectionDirty) {
+            sceneView._viewProjectionDirty = false;
+
+            Matrix4.multiply(sceneView._camera.frustum.projectionMatrix, sceneView._camera.viewMatrix, sceneView._viewProjection);
+        }
+    }
+
+    function cleanInverseViewProjection(sceneView) {
+        if (sceneView._inverseViewProjectionDirty) {
+            sceneView._inverseViewProjectionDirty = false;
+
+            Matrix4.inverse(sceneView.viewProjection, sceneView._inverseViewProjection);
+        }
+    }
 
     defineProperties(SceneView.prototype, {
         /**
@@ -357,6 +394,26 @@ define([
             get : function() {
                 return this._frustumCommandsList.length;
             }
+        },
+
+        /**
+         * @private
+         */
+        viewProjection : {
+            get : function() {
+                cleanViewProjection(this);
+                return this._viewProjection;
+            }
+        },
+
+        /**
+         * @private
+         */
+        inverseViewProjection : {
+            get : function() {
+                cleanInverseViewProjection(this);
+                return this._inverseViewProjection;
+            }
         }
     });
 
@@ -374,11 +431,6 @@ define([
         }
 
         return undefined;
-    }
-
-    function clearPasses(passes) {
-        passes.render = false;
-        passes.pick = false;
     }
 
     var originalCamera;

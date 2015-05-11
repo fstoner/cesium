@@ -31,7 +31,7 @@ define([
         this._shadersByTexturesFlags = [];
     }
 
-    GlobeSurfaceShaderSet.prototype.getShaderProgram = function(context, sceneMode, surfaceTile, numberOfDayTextures, applyBrightness, applyContrast, applyHue, applySaturation, applyGamma, applyAlpha, showReflectiveOcean, showOceanWaves, enableLighting, hasVertexNormals, useWebMercatorProjection) {
+    GlobeSurfaceShaderSet.prototype.getShaderProgram = function(context, sceneMode, surfaceTile, numberOfDayTextures, applyBrightness, applyContrast, applyHue, applySaturation, applyGamma, applyAlpha, showReflectiveOcean, showOceanWaves, enableLighting, hasVertexNormals, useWebMercatorProjection, showShadows) {
         var flags = sceneMode |
                     (applyBrightness << 2) |
                     (applyContrast << 3) |
@@ -43,7 +43,8 @@ define([
                     (showOceanWaves << 9) |
                     (enableLighting << 10) |
                     (hasVertexNormals << 11) |
-                    (useWebMercatorProjection << 12);
+                    (useWebMercatorProjection << 12) |
+                    (showShadows << 13);
 
         var surfaceShader = surfaceTile.surfaceShader;
         if (defined(surfaceShader) &&
@@ -101,6 +102,10 @@ define([
                     vs.defines.push('ENABLE_DAYNIGHT_SHADING');
                     fs.defines.push('ENABLE_DAYNIGHT_SHADING');
                 }
+            }
+
+            if (showShadows) {
+                fs.defines.push('SHADOWS');
             }
 
             var computeDayColor = '\

@@ -47,6 +47,12 @@ uniform sampler2D u_oceanNormalMap;
 uniform vec2 u_lightingFadeDistance;
 #endif
 
+#ifndef SHADOWS
+uniform mat4 u_shadowSourceViewProjection;
+uniform mat4 u_shadowSourceInverseViewProjection;
+uniform sampler2D u_shadowDepthTexture;
+#endif
+
 varying vec3 v_positionMC;
 varying vec3 v_positionEC;
 varying vec2 v_textureCoordinates;
@@ -169,6 +175,24 @@ void main()
     gl_FragColor = vec4(color.rgb * diffuseIntensity, color.a);
 #else
     gl_FragColor = color;
+#endif
+
+#ifndef SHADOWS
+	vec4 positionWC = czm_inverseView * vec4(v_positionEC, 1.0);
+	vec4 positionSS = u_shadowSourceViewProjection * positionWC;
+	vec3 ndcSS = positionSS.xyz / positionSS.w;
+	vec2 texSS = vec2(ndcSS.x / 2.0 + 0.5, ndcSS.y / 2.0 + 0.5);
+
+    if (texSS.x > 0.0 && texSS.x < 1.0 && texSS.y > 0.0 && texSS.y < 1.0)
+    {
+	    float depthSS = texture2D(u_shadowDepthTexture, texSS).r;
+
+	    if (ndcSS.z > depthSS)
+	    {
+		    gl_FragColor = vec4(1.0);
+	    }
+    }
+
 #endif
 }
 
