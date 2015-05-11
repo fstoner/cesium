@@ -282,7 +282,7 @@ define([
          *
          * @default 1
          */
-        this.debugShowGlobeDepthFrustum = 2;
+        this.debugShowGlobeDepthFrustum = 1;
 
         this._debugSphere = undefined;
 

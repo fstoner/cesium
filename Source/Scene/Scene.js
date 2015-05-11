@@ -1499,34 +1499,35 @@ define([
         frameState.passes.render = true;
         frameState.creditDisplay.beginFrame();
 
+        var context = scene.context;
+
         if (debugSceneView) {
             if (scene._shadowSources.length === 0) {
                 var source = new SceneView(scene, frameState);
                 scene._shadowSources[scene._shadowSources.length] = source;
                 source.debugShowGlobeDepth = true;
             }
-            var c = scene.context;
             frameState.passes.shadow = true;
-            scene._shadowSources[scene._shadowSources.length - 1].render(scene, c, frameState, scene._passState);
+            scene._shadowSources[scene._shadowSources.length - 1].render(scene, context, frameState, scene._passState);
             frameState.passes.shadow = false;
-            scene._shadowSources[scene._shadowSources.length - 1].execute(c, scene._passState);
         }
 
-        var context = scene.context;
-        if (!showSceneView) {
-            var us = scene.context.uniformState;
-            us.update(context, frameState);
+        var us = scene.context.uniformState;
+        us.update(context, frameState);
 
-            scene._commandList.length = 0;
-            scene._overlayCommandList.length = 0;
+        scene._commandList.length = 0;
+        scene._overlayCommandList.length = 0;
 
-            updatePrimitives(scene);
-            createPotentiallyVisibleSet(scene);
+        updatePrimitives(scene);
+        createPotentiallyVisibleSet(scene);
 
-            var passState = scene._passState;
+        var passState = scene._passState;
 
-            executeCommands(scene, frameState, passState, defaultValue(scene.backgroundColor, Color.BLACK));
-            executeOverlayCommands(scene, passState);
+        executeCommands(scene, frameState, passState, defaultValue(scene.backgroundColor, Color.BLACK));
+        executeOverlayCommands(scene, passState);
+
+        if (showSceneView) {
+            scene._shadowSources[scene._shadowSources.length - 1].execute(context, scene._passState);
         }
 
         frameState.creditDisplay.endFrame();
