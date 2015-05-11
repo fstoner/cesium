@@ -306,7 +306,8 @@ define([
                 return that._inverseViewProjection;
             },
             u_shadowDepthTexture : function() {
-                return that._debugGlobeDepths[that.debugShowGlobeDepthFrustum - 1];
+                var gd = that.debugShowGlobeDepth ? getDebugGlobeDepth(that, context, that.debugShowGlobeDepthFrustum - 1) : that._globeDepth;
+                return gd;
             }
         };
 
@@ -908,7 +909,7 @@ define([
      * @private
      */
     SceneView.prototype.execute = function(context, passState) {
-        var gd = getDebugGlobeDepth(this, context, this.debugShowGlobeDepthFrustum - 1);
+        var gd = this.debugShowGlobeDepth ? getDebugGlobeDepth(this, context, this.debugShowGlobeDepthFrustum - 1) : this._globeDepth;
         gd.executeDebugGlobeDepth(context, passState);
     };
 

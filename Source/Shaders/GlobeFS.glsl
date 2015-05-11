@@ -47,7 +47,7 @@ uniform sampler2D u_oceanNormalMap;
 uniform vec2 u_lightingFadeDistance;
 #endif
 
-#ifndef SHADOWS
+#ifdef SHADOWS
 uniform mat4 u_shadowSourceViewProjection;
 uniform mat4 u_shadowSourceInverseViewProjection;
 uniform sampler2D u_shadowDepthTexture;
@@ -177,7 +177,7 @@ void main()
     gl_FragColor = color;
 #endif
 
-#ifndef SHADOWS
+#ifdef SHADOWS
 	vec4 positionWC = czm_inverseView * vec4(v_positionEC, 1.0);
 	vec4 positionSS = u_shadowSourceViewProjection * positionWC;
 	vec3 ndcSS = positionSS.xyz / positionSS.w;

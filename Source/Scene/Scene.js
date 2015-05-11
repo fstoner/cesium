@@ -1484,7 +1484,7 @@ define([
 
     var debugSceneView = true;
 
-    var showSceneView = true;
+    var showSceneView = false;
 
     function render(scene, time) {
         if (!defined(time)) {
@@ -1505,7 +1505,6 @@ define([
             if (scene._shadowSources.length === 0) {
                 var source = new SceneView(scene, frameState);
                 scene._shadowSources[scene._shadowSources.length] = source;
-                source.debugShowGlobeDepth = true;
             }
             frameState.passes.shadow = true;
             scene._shadowSources[scene._shadowSources.length - 1].render(scene, context, frameState, scene._passState);
