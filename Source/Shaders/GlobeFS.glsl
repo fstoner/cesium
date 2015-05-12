@@ -181,19 +181,13 @@ void main()
 	vec4 positionWC = czm_inverseView * vec4(v_positionEC, 1.0);
 	vec4 positionSS = u_shadowSourceViewProjection * positionWC;
 	vec3 ndcSS = positionSS.xyz / positionSS.w;
-	vec2 texSS = vec2(ndcSS.x / 2.0 + 0.5, ndcSS.y / 2.0 + 0.5);
+	vec3 texSS = ndcSS / 2.0 + 0.5;
 
-    if (texSS.x > 0.0 && texSS.x < 1.0 && texSS.y > 0.0 && texSS.y < 1.0)
-    {
-	    float depthSS = texture2D(u_shadowDepthTexture, texSS).r;
+	float red = (texSS.x > 0.0 && texSS.x < 1.0) ? 1.0 : 0.0;
+	float green = (texSS.y > 0.0 && texSS.y < 1.0) ? 1.0 : 0.0;
+	float blue = (texSS.z > 0.0 && texSS.z < 1.0) ? 1.0 : 0.0;
 
-	    if (ndcSS.z > depthSS)
-	    {
-		    gl_FragColor = vec4(1.0);
-	    }
-		    gl_FragColor = vec4(1.0);
-    }
-
+    gl_FragColor = vec4(red, green, blue, 1.0);
 #endif
 }
 
