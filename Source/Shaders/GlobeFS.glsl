@@ -178,16 +178,20 @@ void main()
 #endif
 
 #ifdef SHADOWS
-	vec4 positionWC = czm_inverseView * vec4(v_positionEC, 1.0);
-	vec4 positionSS = u_shadowSourceViewProjection * positionWC;
-	vec3 ndcSS = positionSS.xyz / positionSS.w;
-	vec3 texSS = ndcSS / 2.0 + 0.5;
+	vec4 world = czm_inverseView * vec4(v_positionEC, 1.0);
+	vec4 clip = u_shadowSourceViewProjection * world;
+	vec3 ndc = clip.xyz / clip.w;
+	vec3 tex = ndc / 2.0 + 0.5;
 
-	float red = (texSS.x > 0.0 && texSS.x < 1.0) ? 1.0 : 0.0;
-	float green = (texSS.y > 0.0 && texSS.y < 1.0) ? 1.0 : 0.0;
-	float blue = (texSS.z > 0.0 && texSS.z < 1.0) ? 1.0 : 0.0;
+	if (tex.x > 0.0 && tex.x < 1.0 && tex.y > 0.0 && tex.y < 1.0 && tex.z > 0.0 && tex.z < 1.0)
+	{
+		float mask = texture2D(u_shadowDepthTexture, tex.xy).r;
 
-    gl_FragColor = vec4(red, green, blue, 1.0);
+		if (tex.z > mask)
+		{
+		    gl_FragColor = vec4(0.0, 0.0, 0.0, 0.5);
+		}
+	}
 #endif
 }
 
