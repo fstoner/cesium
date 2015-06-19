@@ -185,7 +185,7 @@ void main()
 
 	if (tex.x > 0.0 && tex.x < 1.0 && tex.y > 0.0 && tex.y < 1.0 && tex.z > 0.0 && tex.z < 1.0)
 	{
-		float mask = texture2D(u_shadowDepthTexture, tex.xy).r;
+		float mask = czm_unpackDepth(texture2D(u_shadowDepthTexture, tex.xy));
 
 		if (tex.z > mask)
 		{
